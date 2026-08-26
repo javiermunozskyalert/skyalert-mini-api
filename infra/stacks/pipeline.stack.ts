@@ -32,7 +32,7 @@ export class PipelineStack extends cdk.Stack {
         commands: [
           'corepack enable',
           'corepack prepare pnpm@9.15.4 --activate',
-          'pnpm install --frozen-lockfile',
+          'pnpm install',
           'pnpm build',
           'npx cdk synth --context env=staging',
         ],
