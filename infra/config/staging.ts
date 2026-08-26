@@ -3,7 +3,7 @@ import { EnvironmentConfig } from './environment.types';
 export const stagingConfig: EnvironmentConfig = {
   envName: 'staging',
   account: '438633446050',
-  region: 'us-east-2',
+  region: 'us-east-1',
   prefix: 'skyalert-stg',
 
   tags: {

@@ -3,6 +3,10 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 import { BaseStackProps } from '../shared/stack-props';
 
+/**
+ * Auth Stack — importa el User Pool existente creado externamente.
+ * No crea un nuevo Cognito, solo lo referencia para que otros stacks lo usen.
+ */
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.IUserPool;
 
@@ -11,57 +15,21 @@ export class AuthStack extends cdk.Stack {
 
     const { config } = props;
 
-    const userPool = new cognito.UserPool(this, 'UserPool', {
-      userPoolName: `${config.prefix}-user-pool`,
-      selfSignUpEnabled: false, // Solo admins crean usuarios
-      signInAliases: {
-        email: true,
-      },
-      standardAttributes: {
-        email: { required: true, mutable: false },
-        fullname: { required: true, mutable: true },
-      },
-      customAttributes: {
-        role: new cognito.StringAttribute({ mutable: true }),
-        clientId: new cognito.StringAttribute({ mutable: true }),
-      },
-      passwordPolicy: {
-        minLength: 8,
-        requireUppercase: true,
-        requireLowercase: true,
-        requireDigits: true,
-        requireSymbols: true,
-        tempPasswordValidity: cdk.Duration.days(7),
-      },
-      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      removalPolicy: config.dynamodb.deletionProtection
-        ? cdk.RemovalPolicy.RETAIN
-        : cdk.RemovalPolicy.DESTROY,
-    });
+    // User Pool existente en us-east-1 (creado externamente)
+    const existingUserPoolId = config.envName === 'staging'
+      ? 'us-east-1_jWSv0ZVCp'  // skyalert-mini-staging
+      : '';  // TODO: configurar para production
 
-    // App Client para el frontend
-    const appClient = userPool.addClient('WebAppClient', {
-      userPoolClientName: `${config.prefix}-web-client`,
-      authFlows: {
-        userSrp: true, // SRP — password nunca viaja en texto plano
-      },
-      accessTokenValidity: cdk.Duration.hours(1),
-      idTokenValidity: cdk.Duration.hours(1),
-      refreshTokenValidity: cdk.Duration.days(30),
-      preventUserExistenceErrors: true,
-    });
-
-    this.userPool = userPool;
+    this.userPool = cognito.UserPool.fromUserPoolId(
+      this,
+      'ImportedUserPool',
+      existingUserPoolId
+    );
 
     // --- Outputs ---
     new cdk.CfnOutput(this, 'UserPoolId', {
-      value: userPool.userPoolId,
+      value: this.userPool.userPoolId,
       exportName: `${config.prefix}-user-pool-id`,
-    });
-
-    new cdk.CfnOutput(this, 'UserPoolClientId', {
-      value: appClient.userPoolClientId,
-      exportName: `${config.prefix}-user-pool-client-id`,
     });
   }
 }
