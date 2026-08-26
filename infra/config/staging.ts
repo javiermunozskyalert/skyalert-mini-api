@@ -2,8 +2,8 @@ import { EnvironmentConfig } from './environment.types';
 
 export const stagingConfig: EnvironmentConfig = {
   envName: 'staging',
-  account: process.env.CDK_DEFAULT_ACCOUNT ?? '',
-  region: process.env.CDK_DEFAULT_REGION ?? 'us-east-1',
+  account: '438633446050',
+  region: 'us-east-2',
   prefix: 'skyalert-stg',
 
   tags: {

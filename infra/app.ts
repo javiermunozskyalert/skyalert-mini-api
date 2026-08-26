@@ -5,6 +5,7 @@ import { getConfig } from './config';
 import { DatabaseStack } from './stacks/database.stack';
 import { AuthStack } from './stacks/auth.stack';
 import { ApiStack } from './stacks/api.stack';
+import { PipelineStack } from './stacks/pipeline.stack';
 
 const app = new cdk.App();
 
@@ -24,8 +25,18 @@ const envProps: cdk.Environment = {
   region: config.region,
 };
 
-// --- Stacks ---
+/**
+ * Pipeline Stack — se deploya una sola vez manualmente.
+ * Después se auto-actualiza con cada push a la rama staging.
+ */
+new PipelineStack(app, 'skyalert-mini-pipeline-stack', {
+  env: envProps,
+});
 
+/**
+ * Stacks individuales — para deploy manual cuando sea necesario
+ * (útil para desarrollo local o emergencias).
+ */
 const databaseStack = new DatabaseStack(app, `${config.prefix}-database`, {
   env: envProps,
   config,

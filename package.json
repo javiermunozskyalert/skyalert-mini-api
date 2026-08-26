@@ -6,11 +6,11 @@
   "scripts": {
     "build": "tsc --build",
     "lint": "eslint . --ext .ts",
-    "cdk:synth:staging": "pnpm cdk synth --context env=staging",
+    "cdk:synth:staging": "pnpm cdk synth --context env=staging --profile skyalert-mini-staging",
     "cdk:synth:production": "pnpm cdk synth --context env=production",
-    "cdk:deploy:staging": "pnpm cdk deploy --all --context env=staging",
+    "cdk:deploy:staging": "pnpm cdk deploy --all --context env=staging --profile skyalert-mini-staging",
     "cdk:deploy:production": "pnpm cdk deploy --all --context env=production --require-approval broadening",
-    "cdk:diff:staging": "pnpm cdk diff --all --context env=staging",
+    "cdk:diff:staging": "pnpm cdk diff --all --context env=staging --profile skyalert-mini-staging",
     "cdk:diff:production": "pnpm cdk diff --all --context env=production"
   },
   "devDependencies": {
