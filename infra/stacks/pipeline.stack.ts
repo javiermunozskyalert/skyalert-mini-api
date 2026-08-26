@@ -29,9 +29,12 @@ export class PipelineStack extends cdk.Stack {
             triggerOnPush: true,
           }
         ),
-        commands: [
+        installCommands: [
+          'n 20',
           'corepack enable',
           'corepack prepare pnpm@9.15.4 --activate',
+        ],
+        commands: [
           'pnpm install',
           'pnpm build',
           'npx cdk synth --context env=staging',
