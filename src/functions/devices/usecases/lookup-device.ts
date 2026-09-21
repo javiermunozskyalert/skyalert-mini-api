@@ -36,8 +36,8 @@ export async function lookupDevice(
 
     return success({
       deviceId: gpsDevice.device_id,
-      uuid: gpsDevice['uuid-device'],
-      status: gpsDevice.status,
+      uuid: gpsDevice.uuid_device,
+      statusDevice: gpsDevice.status_device,
       exists: true,
     });
   } catch (error: unknown) {

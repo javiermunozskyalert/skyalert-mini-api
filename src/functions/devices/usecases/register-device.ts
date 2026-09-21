@@ -3,7 +3,7 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
 import { created, badRequest, forbidden, notFound, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
-import { findGpsDeviceByUuid, updateGpsDeviceStatus } from '../../../shared/gps-devices';
+import { findGpsDeviceByUuid, updateDeviceStatus } from '../../../shared/gps-devices';
 import { logger } from '../../../shared/logger';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
@@ -21,10 +21,11 @@ const RegisterDeviceSchema = z.object({
  * POST /devices
  *
  * Flujo:
- *  1. Valida que el device existe en gps-tracker-devices (por uuid-device).
+ *  1. Valida que el device existe en gps-tracker-devices (por uuid_device).
  *  2. Crea el registro en skyalert-stg-devices guardando SOLO el device_id
  *     del GPS como referencia (gpsDeviceId).
- *  3. Cambia el status del device en gps-tracker-devices a "active".
+ *  3. Cambia el status_device del device en gps-tracker-devices a "active"
+ *     (sin tocar el campo `status` de conectividad online/offline del GPS).
  */
 export async function registerDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -75,10 +76,10 @@ export async function registerDevice(
       })
     );
 
-    // 3. Cambiar el status del device en gps-tracker-devices a "active"
-    await updateGpsDeviceStatus(gpsDeviceId, 'active');
+    // 3. Cambiar el status administrativo del device a "active" (status_device)
+    await updateDeviceStatus(gpsDeviceId, 'active');
 
-    logger.info('Device registered and GPS status set to active', {
+    logger.info('Device registered and status_device set to active', {
       registrationId,
       gpsDeviceId,
       clientId,
@@ -90,7 +91,7 @@ export async function registerDevice(
       clientId,
       name,
       gpsDeviceId,
-      gpsStatus: 'active',
+      statusDevice: 'active',
     });
   } catch (error: unknown) {
     logger.error('Failed to register device', {
