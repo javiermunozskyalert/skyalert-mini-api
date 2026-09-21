@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
 import {
   AdminGetUserCommand,
+  AdminListGroupsForUserCommand,
   UserNotFoundException,
   AttributeType,
 } from '@aws-sdk/client-cognito-identity-provider';
@@ -14,7 +15,7 @@ function getAttr(attrs: AttributeType[] | undefined, name: string): string | und
 }
 
 /**
- * Obtiene un usuario por username. Solo admins.
+ * Obtiene un usuario por username, incluyendo su rol (grupo). Solo admins.
  */
 export async function getUser(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -27,22 +28,27 @@ export async function getUser(
   const username = event.pathParameters?.proxy ?? '';
 
   try {
-    const result = await cognitoClient.send(
-      new AdminGetUserCommand({
-        UserPoolId: USER_POOL_ID,
-        Username: username,
-      })
-    );
+    const [user, groups] = await Promise.all([
+      cognitoClient.send(
+        new AdminGetUserCommand({ UserPoolId: USER_POOL_ID, Username: username })
+      ),
+      cognitoClient.send(
+        new AdminListGroupsForUserCommand({ UserPoolId: USER_POOL_ID, Username: username })
+      ),
+    ]);
+
+    const role = (groups.Groups ?? [])
+      .sort((a, b) => (a.Precedence ?? 99) - (b.Precedence ?? 99))[0]?.GroupName;
 
     return success({
-      username: result.Username,
-      email: getAttr(result.UserAttributes, 'email'),
-      name: getAttr(result.UserAttributes, 'name'),
-      role: getAttr(result.UserAttributes, 'custom:role'),
-      clientId: getAttr(result.UserAttributes, 'custom:clientId'),
-      status: result.UserStatus,
-      enabled: result.Enabled,
-      createdAt: result.UserCreateDate,
+      username: user.Username,
+      email: getAttr(user.UserAttributes, 'email'),
+      name: getAttr(user.UserAttributes, 'name'),
+      role,
+      clientId: getAttr(user.UserAttributes, 'custom:clientId'),
+      status: user.UserStatus,
+      enabled: user.Enabled,
+      createdAt: user.UserCreateDate,
     });
   } catch (error: unknown) {
     if (error instanceof UserNotFoundException) {

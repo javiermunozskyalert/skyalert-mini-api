@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
 import {
   ListUsersCommand,
+  AdminListGroupsForUserCommand,
   UserType,
   AttributeType,
 } from '@aws-sdk/client-cognito-identity-provider';
@@ -13,12 +14,27 @@ function getAttr(attrs: AttributeType[] | undefined, name: string): string | und
   return attrs?.find((a) => a.Name === name)?.Value;
 }
 
-function mapUser(user: UserType) {
+async function getUserRole(username: string | undefined): Promise<string | undefined> {
+  if (!username) return undefined;
+  const result = await cognitoClient.send(
+    new AdminListGroupsForUserCommand({
+      UserPoolId: USER_POOL_ID,
+      Username: username,
+    })
+  );
+  // El grupo con menor Precedence es el rol principal
+  const groups = (result.Groups ?? []).sort(
+    (a, b) => (a.Precedence ?? 99) - (b.Precedence ?? 99)
+  );
+  return groups[0]?.GroupName;
+}
+
+async function mapUser(user: UserType) {
   return {
     username: user.Username,
     email: getAttr(user.Attributes, 'email'),
     name: getAttr(user.Attributes, 'name'),
-    role: getAttr(user.Attributes, 'custom:role'),
+    role: await getUserRole(user.Username),
     clientId: getAttr(user.Attributes, 'custom:clientId'),
     status: user.UserStatus,
     enabled: user.Enabled,
@@ -50,8 +66,10 @@ export async function listUsers(
       })
     );
 
+    const items = await Promise.all((result.Users ?? []).map(mapUser));
+
     return success({
-      items: (result.Users ?? []).map(mapUser),
+      items,
       paginationToken: result.PaginationToken ?? null,
     });
   } catch (error: unknown) {

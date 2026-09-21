@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
 import {
   AdminCreateUserCommand,
+  AdminAddUserToGroupCommand,
   UsernameExistsException,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { UserClaims, isAdmin } from '../../../shared/auth';
@@ -12,12 +13,12 @@ import { z } from 'zod';
 const CreateUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(200),
-  role: z.enum(['admin', 'internal', 'client']),
+  role: z.enum(['admin', 'internal', 'client', 'collaborator']),
   clientId: z.string().optional(),
 });
 
 /**
- * Crea un usuario en Cognito con AdminCreateUser.
+ * Crea un usuario en Cognito con AdminCreateUser y lo asigna a un grupo (rol).
  * Cognito genera una password temporal y envía un email (vía SES) con las credenciales.
  * El usuario deberá cambiar la contraseña en el primer login (NEW_PASSWORD_REQUIRED).
  */
@@ -38,9 +39,9 @@ export async function createUser(
 
   const { email, name, role, clientId } = validation.data;
 
-  // Un usuario tipo client debe estar vinculado a un clientId
-  if (role === 'client' && !clientId) {
-    return badRequest('clientId is required for users with role "client"');
+  // Los roles client y collaborator deben estar vinculados a un clientId
+  if ((role === 'client' || role === 'collaborator') && !clientId) {
+    return badRequest(`clientId is required for users with role "${role}"`);
   }
 
   try {
@@ -52,14 +53,22 @@ export async function createUser(
           { Name: 'email', Value: email },
           { Name: 'email_verified', Value: 'true' },
           { Name: 'name', Value: name },
-          { Name: 'custom:role', Value: role },
           ...(clientId ? [{ Name: 'custom:clientId', Value: clientId }] : []),
         ],
         DesiredDeliveryMediums: ['EMAIL'],
       })
     );
 
-    logger.info('User created in Cognito', {
+    // Asignar el rol vía Cognito Group
+    await cognitoClient.send(
+      new AdminAddUserToGroupCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: email,
+        GroupName: role,
+      })
+    );
+
+    logger.info('User created and assigned to group', {
       email,
       role,
       createdBy: claims.sub,

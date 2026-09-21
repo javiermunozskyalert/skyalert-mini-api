@@ -1,5 +1,8 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
 import {
+  AdminAddUserToGroupCommand,
+  AdminRemoveUserFromGroupCommand,
+  AdminListGroupsForUserCommand,
   AdminUpdateUserAttributesCommand,
   UserNotFoundException,
 } from '@aws-sdk/client-cognito-identity-provider';
@@ -10,12 +13,13 @@ import { logger } from '../../../shared/logger';
 import { z } from 'zod';
 
 const UpdateRoleSchema = z.object({
-  role: z.enum(['admin', 'internal', 'client']),
+  role: z.enum(['admin', 'internal', 'client', 'collaborator']),
   clientId: z.string().optional(),
 });
 
 /**
- * Cambia el rol (custom:role) de un usuario. Solo admins.
+ * Cambia el rol de un usuario reasignando su Cognito Group. Solo admins.
+ * Quita al usuario de todos sus grupos actuales y lo agrega al nuevo.
  */
 export async function updateUserRole(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -25,7 +29,7 @@ export async function updateUserRole(
     return forbidden('Only admin users can change roles');
   }
 
-  const username = event.pathParameters?.proxy ?? '';
+  const username = event.pathParameters?.proxy?.split('/')[0] ?? '';
   const body = JSON.parse(event.body ?? '{}');
   const validation = UpdateRoleSchema.safeParse(body);
 
@@ -35,21 +39,50 @@ export async function updateUserRole(
 
   const { role, clientId } = validation.data;
 
-  if (role === 'client' && !clientId) {
-    return badRequest('clientId is required for users with role "client"');
+  if ((role === 'client' || role === 'collaborator') && !clientId) {
+    return badRequest(`clientId is required for users with role "${role}"`);
   }
 
   try {
-    await cognitoClient.send(
-      new AdminUpdateUserAttributesCommand({
+    // Quitar al usuario de todos sus grupos actuales
+    const currentGroups = await cognitoClient.send(
+      new AdminListGroupsForUserCommand({
         UserPoolId: USER_POOL_ID,
         Username: username,
-        UserAttributes: [
-          { Name: 'custom:role', Value: role },
-          ...(clientId ? [{ Name: 'custom:clientId', Value: clientId }] : []),
-        ],
       })
     );
+
+    for (const group of currentGroups.Groups ?? []) {
+      if (group.GroupName) {
+        await cognitoClient.send(
+          new AdminRemoveUserFromGroupCommand({
+            UserPoolId: USER_POOL_ID,
+            Username: username,
+            GroupName: group.GroupName,
+          })
+        );
+      }
+    }
+
+    // Agregar al nuevo grupo
+    await cognitoClient.send(
+      new AdminAddUserToGroupCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: username,
+        GroupName: role,
+      })
+    );
+
+    // Actualizar clientId si aplica
+    if (clientId) {
+      await cognitoClient.send(
+        new AdminUpdateUserAttributesCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: username,
+          UserAttributes: [{ Name: 'custom:clientId', Value: clientId }],
+        })
+      );
+    }
 
     logger.info('User role updated', { username, role, updatedBy: claims.sub });
     return success({ username, role, clientId });
