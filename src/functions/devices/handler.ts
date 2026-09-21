@@ -2,10 +2,13 @@ import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from
 import { logger } from '../../shared/logger';
 import { badRequest, serverError } from '../../shared/response';
 import { extractClaims } from '../../shared/auth';
+import { lookupDevice } from './usecases/lookup-device';
+import { registerDevice } from './usecases/register-device';
 
 /**
  * Handler delgado — Devices domain.
- * TODO: Implementar usecases/ cuando se definan los endpoints.
+ * Registra devices en skyalert vinculándolos a un cliente y al device
+ * físico existente en gps-tracker-devices.
  */
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -17,11 +20,21 @@ export async function handler(
   logger.info('Request received', { method, path, userId: claims.sub });
 
   try {
-    // TODO: Implementar routing a usecases
-    return badRequest(`Devices: route not implemented yet — ${method} ${path}`);
+    // GET /devices/lookup/{uuid} — valida existencia por uuid en gps-tracker-devices
+    if (method === 'GET' && path.includes('/devices/lookup/')) {
+      return await lookupDevice(event, claims);
+    }
+
+    // POST /devices — registra el device vinculado al cliente
+    if (method === 'POST' && path === '/devices') {
+      return await registerDevice(event, claims);
+    }
+
+    return badRequest(`Unsupported route: ${method} ${path}`);
   } catch (error) {
     logger.error('Unhandled error', {
       error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
     });
     return serverError();
   }

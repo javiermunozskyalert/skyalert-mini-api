@@ -74,9 +74,21 @@ export class ApiStack extends cdk.Stack {
       entry: 'src/functions/devices/handler.ts',
       environment: {
         TABLE_NAME: tables.devices.tableName,
+        GPS_DEVICES_TABLE: 'gps-tracker-devices',
       },
     });
     tables.devices.grantReadWriteData(devicesFn);
+
+    // Acceso cross-project a la tabla del GPS Tracker (gps-tracker-devices).
+    // Necesario para validar el device por uuid y cambiar su status al registrarlo.
+    const gpsDevicesTableArn = `arn:aws:dynamodb:${config.region}:${cdk.Stack.of(this).account}:table/gps-tracker-devices`;
+    devicesFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['dynamodb:Scan', 'dynamodb:GetItem', 'dynamodb:UpdateItem'],
+        resources: [gpsDevicesTableArn],
+      })
+    );
 
     // --- Lambda: Users ---
     const usersFn = createLambdaFunction(this, 'UsersFunction', {
