@@ -4,6 +4,7 @@ import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayv2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as apigatewayv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { BaseStackProps } from '../shared/stack-props';
 import { DynamoTables } from './database.stack';
@@ -87,6 +88,23 @@ export class ApiStack extends cdk.Stack {
       },
     });
     tables.users.grantReadWriteData(usersFn);
+
+    // Permisos para operaciones admin de Cognito (least privilege)
+    usersFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminGetUser',
+          'cognito-idp:AdminDeleteUser',
+          'cognito-idp:AdminUpdateUserAttributes',
+          'cognito-idp:AdminEnableUser',
+          'cognito-idp:AdminDisableUser',
+          'cognito-idp:ListUsers',
+        ],
+        resources: [userPool.userPoolArn],
+      })
+    );
 
     // --- Lambda: Seismic ---
     const seismicFn = createLambdaFunction(this, 'SeismicFunction', {
