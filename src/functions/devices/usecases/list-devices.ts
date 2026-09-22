@@ -1,67 +1,100 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
-import { success, badRequest, forbidden, serverError } from '../../../shared/response';
+import { success, forbidden, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
 import { logger } from '../../../shared/logger';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
 /**
- * Lista los devices de un cliente.
- * GET /devices?clientId=...
+ * Lista devices según la visibilidad del rol del usuario:
  *
- * - Admin/internal: pueden listar los de cualquier clientId.
- * - client/collaborator: solo pueden listar los de su propia organización.
+ *  - admin / internal → ven TODOS los devices (todas las organizaciones).
+ *  - client / collaborator → ven solo los de SU compañía (su clientId).
+ *
+ * GET /devices
+ *   admin/internal: opcionalmente ?clientId=... para filtrar una compañía.
  */
 export async function listDevices(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   claims: UserClaims
 ): Promise<APIGatewayProxyResultV2> {
+  const limit = parseInt(event.queryStringParameters?.limit ?? '20', 10);
+  const lastKey = event.queryStringParameters?.lastKey;
   const requestedClientId = event.queryStringParameters?.clientId;
 
-  // Determinar el clientId efectivo según el rol
-  let clientId: string;
-  if (isAdmin(claims)) {
-    if (!requestedClientId) {
-      return badRequest('clientId query parameter is required');
+  try {
+    // Determinar el scope según el rol
+    if (isAdmin(claims)) {
+      // admin/internal → ven todo; si mandan clientId, filtran esa compañía
+      if (requestedClientId) {
+        return await listByClient(requestedClientId, limit, lastKey);
+      }
+      return await listAll(limit, lastKey);
     }
-    clientId = requestedClientId;
-  } else {
-    // Un usuario no-admin solo puede ver los de su propia organización
+
+    // client/collaborator → solo su compañía
     if (!claims.clientId) {
       return forbidden('Your user is not associated with a client');
     }
-    if (requestedClientId && requestedClientId !== claims.clientId) {
-      return forbidden('You can only list devices from your own organization');
-    }
-    clientId = claims.clientId;
-  }
-
-  const limit = parseInt(event.queryStringParameters?.limit ?? '20', 10);
-  const lastKey = event.queryStringParameters?.lastKey;
-
-  try {
-    const result = await docClient.send(
-      new QueryCommand({
-        TableName: TABLE_NAME,
-        KeyConditionExpression: 'PK = :pk',
-        ExpressionAttributeValues: { ':pk': `DEVICE#${clientId}` },
-        Limit: Math.min(limit, 100),
-        ExclusiveStartKey: lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined,
-      })
-    );
-
-    return success({
-      items: (result.Items ?? []).filter((d) => d.status_device !== 'inactive'),
-      lastKey: result.LastEvaluatedKey
-        ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
-        : null,
-    });
+    return await listByClient(claims.clientId, limit, lastKey);
   } catch (error: unknown) {
     logger.error('Failed to list devices', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
     return serverError('Failed to list devices');
   }
+}
+
+/** Lista los devices de una compañía específica (Query por PK). */
+async function listByClient(
+  clientId: string,
+  limit: number,
+  lastKey?: string
+): Promise<APIGatewayProxyResultV2> {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'PK = :pk',
+      FilterExpression: 'status_device <> :inactive',
+      ExpressionAttributeValues: {
+        ':pk': `DEVICE#${clientId}`,
+        ':inactive': 'inactive',
+      },
+      Limit: Math.min(limit, 100),
+      ExclusiveStartKey: lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined,
+    })
+  );
+
+  return success({
+    items: result.Items ?? [],
+    lastKey: result.LastEvaluatedKey
+      ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+      : null,
+  });
+}
+
+/**
+ * Lista TODOS los devices (admin/internal) con Scan.
+ * NOTA: Scan recorre toda la tabla. Aceptable en beta con pocos devices.
+ * A futuro, considerar un GSI con PK fija (ej: "ALL") para poder hacer Query.
+ */
+async function listAll(limit: number, lastKey?: string): Promise<APIGatewayProxyResultV2> {
+  const result = await docClient.send(
+    new ScanCommand({
+      TableName: TABLE_NAME,
+      FilterExpression: 'status_device <> :inactive',
+      ExpressionAttributeValues: { ':inactive': 'inactive' },
+      Limit: Math.min(limit, 100),
+      ExclusiveStartKey: lastKey ? JSON.parse(decodeURIComponent(lastKey)) : undefined,
+    })
+  );
+
+  return success({
+    items: result.Items ?? [],
+    lastKey: result.LastEvaluatedKey
+      ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
+      : null,
+  });
 }
