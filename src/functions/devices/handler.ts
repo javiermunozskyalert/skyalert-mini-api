@@ -4,11 +4,15 @@ import { badRequest, serverError } from '../../shared/response';
 import { extractClaims } from '../../shared/auth';
 import { lookupDevice } from './usecases/lookup-device';
 import { registerDevice } from './usecases/register-device';
+import { listDevices } from './usecases/list-devices';
+import { getDevice } from './usecases/get-device';
+import { updateDevice } from './usecases/update-device';
+import { deleteDevice } from './usecases/delete-device';
 
 /**
  * Handler delgado — Devices domain.
- * Registra devices en skyalert vinculándolos a un cliente y al device
- * físico existente en gps-tracker-devices.
+ * Registra y administra devices en skyalert vinculados al device físico
+ * de gps-tracker-devices. El delete es soft (status_device = inactive).
  */
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
@@ -28,6 +32,26 @@ export async function handler(
     // POST /devices — registra el device vinculado al cliente
     if (method === 'POST' && path === '/devices') {
       return await registerDevice(event, claims);
+    }
+
+    // GET /devices — lista devices de un cliente
+    if (method === 'GET' && path === '/devices') {
+      return await listDevices(event, claims);
+    }
+
+    // GET /devices/{registrationId} — detalle
+    if (method === 'GET' && path.startsWith('/devices/')) {
+      return await getDevice(event, claims);
+    }
+
+    // PUT /devices/{registrationId} — actualiza name
+    if (method === 'PUT' && path.startsWith('/devices/')) {
+      return await updateDevice(event, claims);
+    }
+
+    // DELETE /devices/{registrationId} — soft delete (status_device = inactive)
+    if (method === 'DELETE' && path.startsWith('/devices/')) {
+      return await deleteDevice(event, claims);
     }
 
     return badRequest(`Unsupported route: ${method} ${path}`);

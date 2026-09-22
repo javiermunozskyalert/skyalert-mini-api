@@ -63,6 +63,7 @@ export async function registerDevice(
       clientId,
       name,
       gpsDeviceId, // referencia al device en gps-tracker-devices
+      status_device: 'active',
       createdAt: now,
       updatedAt: now,
       createdBy: claims.sub,
