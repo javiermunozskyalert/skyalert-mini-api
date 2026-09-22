@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { UpdateCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { UpdateCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
-import { success, badRequest, forbidden, notFound, serverError } from '../../../shared/response';
+import { success, notFound, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
 import { updateDeviceStatus } from '../../../shared/gps-devices';
 import { logger } from '../../../shared/logger';
@@ -15,23 +15,23 @@ const TABLE_NAME = process.env.TABLE_NAME!;
  * NO borra el registro. En su lugar:
  *  1. Cambia el status_device del device en gps-tracker-devices a "inactive".
  *  2. Marca el registro en skyalert como status_device = inactive (auditoría).
+ *
+ * Visibilidad por rol (misma lógica que update):
+ *  - admin/internal → cualquier device (resuelve clientId globalmente).
+ *  - client/collaborator → solo devices de su compañía.
  */
 export async function deleteDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   claims: UserClaims
 ): Promise<APIGatewayProxyResultV2> {
-  if (!isAdmin(claims)) {
-    return forbidden('Only admin users can delete devices');
-  }
-
   const registrationId = event.pathParameters?.proxy ?? '';
-  const clientId = event.queryStringParameters?.clientId;
-
-  if (!clientId) {
-    return badRequest('clientId query parameter is required');
-  }
 
   try {
+    const clientId = await resolveClientId(registrationId, claims);
+    if (!clientId) {
+      return notFound(`Device ${registrationId} not found`);
+    }
+
     // Obtener el registro para conocer el gpsDeviceId asociado
     const existing = await docClient.send(
       new GetCommand({
@@ -43,7 +43,7 @@ export async function deleteDevice(
       })
     );
 
-    if (!existing.Item) {
+    if (!existing.Item || existing.Item.status_device === 'inactive') {
       return notFound(`Device ${registrationId} not found`);
     }
 
@@ -88,4 +88,27 @@ export async function deleteDevice(
     });
     return serverError('Failed to delete device');
   }
+}
+
+/**
+ * Resuelve el clientId del device según el rol:
+ *  - admin/internal → busca el device globalmente y devuelve su clientId.
+ *  - client/collaborator → usa su propio clientId (del JWT).
+ */
+async function resolveClientId(
+  registrationId: string,
+  claims: UserClaims
+): Promise<string | null> {
+  if (isAdmin(claims)) {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: 'registrationId = :rid',
+        ExpressionAttributeValues: { ':rid': registrationId },
+        Limit: 1,
+      })
+    );
+    return (result.Items?.[0]?.clientId as string) ?? null;
+  }
+  return claims.clientId ?? null;
 }
