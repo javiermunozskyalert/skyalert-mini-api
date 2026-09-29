@@ -127,9 +127,12 @@ export class ApiStack extends cdk.Stack {
       entry: 'src/functions/seismic/handler.ts',
       environment: {
         TABLE_NAME: tables.seismic.tableName,
+        DEVICES_TABLE: tables.devices.tableName,
       },
     });
     tables.seismic.grantReadData(seismicFn);
+    // Lectura sobre devices para validar acceso multi-tenant (client/collaborator)
+    tables.devices.grantReadData(seismicFn);
 
     // --- Routes ---
     this.addRoutes(httpApi, authorizer, '/clients', clientsFn);
