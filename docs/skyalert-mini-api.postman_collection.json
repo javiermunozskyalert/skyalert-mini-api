@@ -1,15 +1,35 @@
 {
   "info": {
     "name": "SkyAlert Mini API",
-    "description": "Colección de la API serverless de SkyAlert Lite (clients, devices, users, seismic). Requiere variables: baseUrl y accessToken (JWT de Cognito).",
+    "description": "Colección de la API serverless de SkyAlert Lite (clients, devices, users, seismic).\n\nAuth: header 'Authorization: {{authScheme}} {{accessToken}}'.\n- App legacy: authScheme = JWT, accessToken = accessToken.token del backend legacy.\n- Web Cognito: authScheme = Bearer, accessToken = JWT de Cognito.\n\nVariables requeridas: baseUrl, authScheme, accessToken.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
-    "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "Authorization", "type": "string" },
+      { "key": "value", "value": "{{authScheme}} {{accessToken}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
   },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Validación genérica a nivel colección",
+          "pm.test('status is not 401 (token válido)', function () {",
+          "  pm.expect(pm.response.code, 'esperaba token válido').to.not.eql(401);",
+          "});",
+          "console.log('HTTP', pm.response.code, pm.response.text());"
+        ]
+      }
+    }
+  ],
   "variable": [
-    { "key": "baseUrl", "value": "https://{apiId}.execute-api.us-east-1.amazonaws.com", "type": "string" },
+    { "key": "baseUrl", "value": "https://n97qy0xdw3.execute-api.us-east-1.amazonaws.com", "type": "string" },
+    { "key": "authScheme", "value": "JWT", "type": "string" },
     { "key": "accessToken", "value": "", "type": "string" },
     { "key": "clientId", "value": "", "type": "string" },
     { "key": "registrationId", "value": "", "type": "string" },
