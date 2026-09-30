@@ -4,6 +4,7 @@ import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayv2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as apigatewayv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { BaseStackProps } from '../shared/stack-props';
 import { DynamoTables } from './database.stack';
@@ -48,12 +49,43 @@ export class ApiStack extends cdk.Stack {
       };
     }
 
-    // --- Cognito JWT Authorizer ---
-    const authorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer(
-      'CognitoAuthorizer',
-      `https://cognito-idp.${config.region}.amazonaws.com/${userPool.userPoolId}`,
+    // --- Lambda Authorizer dual (web Cognito + app legacy) ---
+    // Valida tanto los JWT de Cognito (Bearer, dashboard web) como los JWT HS256
+    // del backend legacy (esquema "JWT", app iOS). Los usuarios de la app legacy
+    // se fuerzan a rol "client" y su tenant es "legacy#<sub>".
+    //
+    // El secreto HS256 del legacy se replica a un SSM del propio account de
+    // mini-api: /skyalert-mini-api/{envName}/jwt.secretOrKey (SecureString).
+    const legacySecretParam = `/skyalert-mini-api/${config.envName}/jwt.secretOrKey`;
+
+    const authorizerFn = createLambdaFunction(this, 'AuthorizerFunction', {
+      config,
+      entry: 'src/functions/authorizer/handler.ts',
+      environment: {
+        COGNITO_ISSUER: `https://cognito-idp.${config.region}.amazonaws.com/${userPool.userPoolId}`,
+        LEGACY_ISSUER: 'api.v3.skyalert',
+        LEGACY_JWT_SECRET_PARAM: legacySecretParam,
+      },
+    });
+
+    // Permiso de lectura del secreto compartido del legacy (SSM SecureString).
+    authorizerFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['ssm:GetParameter'],
+        resources: [
+          `arn:aws:ssm:${config.region}:${cdk.Stack.of(this).account}:parameter${legacySecretParam}`,
+        ],
+      })
+    );
+
+    const authorizer = new apigatewayv2Authorizers.HttpLambdaAuthorizer(
+      'DualAuthorizer',
+      authorizerFn,
       {
-        jwtAudience: ['placeholder'], // Se reemplaza con el client ID real post-deploy
+        responseTypes: [apigatewayv2Authorizers.HttpLambdaResponseType.SIMPLE],
+        identitySource: ['$request.header.Authorization'],
+        resultsCacheTtl: cdk.Duration.minutes(5),
       }
     );
 
@@ -73,9 +105,21 @@ export class ApiStack extends cdk.Stack {
       entry: 'src/functions/devices/handler.ts',
       environment: {
         TABLE_NAME: tables.devices.tableName,
+        GPS_DEVICES_TABLE: 'gps-tracker-devices',
       },
     });
     tables.devices.grantReadWriteData(devicesFn);
+
+    // Acceso cross-project a la tabla del GPS Tracker (gps-tracker-devices).
+    // Necesario para validar el device por uuid y cambiar su status al registrarlo.
+    const gpsDevicesTableArn = `arn:aws:dynamodb:${config.region}:${cdk.Stack.of(this).account}:table/gps-tracker-devices`;
+    devicesFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['dynamodb:Scan', 'dynamodb:GetItem', 'dynamodb:UpdateItem'],
+        resources: [gpsDevicesTableArn],
+      })
+    );
 
     // --- Lambda: Users ---
     const usersFn = createLambdaFunction(this, 'UsersFunction', {
@@ -88,15 +132,38 @@ export class ApiStack extends cdk.Stack {
     });
     tables.users.grantReadWriteData(usersFn);
 
+    // Permisos para operaciones admin de Cognito (least privilege)
+    usersFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminGetUser',
+          'cognito-idp:AdminDeleteUser',
+          'cognito-idp:AdminUpdateUserAttributes',
+          'cognito-idp:AdminEnableUser',
+          'cognito-idp:AdminDisableUser',
+          'cognito-idp:AdminAddUserToGroup',
+          'cognito-idp:AdminRemoveUserFromGroup',
+          'cognito-idp:AdminListGroupsForUser',
+          'cognito-idp:ListUsers',
+        ],
+        resources: [userPool.userPoolArn],
+      })
+    );
+
     // --- Lambda: Seismic ---
     const seismicFn = createLambdaFunction(this, 'SeismicFunction', {
       config,
       entry: 'src/functions/seismic/handler.ts',
       environment: {
         TABLE_NAME: tables.seismic.tableName,
+        DEVICES_TABLE: tables.devices.tableName,
       },
     });
     tables.seismic.grantReadData(seismicFn);
+    // Lectura sobre devices para validar acceso multi-tenant (client/collaborator)
+    tables.devices.grantReadData(seismicFn);
 
     // --- Routes ---
     this.addRoutes(httpApi, authorizer, '/clients', clientsFn);
@@ -113,7 +180,7 @@ export class ApiStack extends cdk.Stack {
 
   private addRoutes(
     httpApi: apigatewayv2.HttpApi,
-    authorizer: apigatewayv2Authorizers.HttpJwtAuthorizer,
+    authorizer: apigatewayv2Authorizers.HttpLambdaAuthorizer,
     basePath: string,
     handler: lambda.IFunction
   ): void {

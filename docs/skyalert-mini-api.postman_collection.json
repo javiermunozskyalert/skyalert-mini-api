@@ -1,0 +1,248 @@
+{
+  "info": {
+    "name": "SkyAlert Mini API",
+    "description": "Colección de la API serverless de SkyAlert Lite (clients, devices, users, seismic). Requiere variables: baseUrl y accessToken (JWT de Cognito).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://{apiId}.execute-api.us-east-1.amazonaws.com", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "clientId", "value": "", "type": "string" },
+    { "key": "registrationId", "value": "", "type": "string" },
+    { "key": "deviceId", "value": "", "type": "string" },
+    { "key": "username", "value": "", "type": "string" },
+    { "key": "uuid", "value": "ska-A1B2C3", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/clients", "host": ["{{baseUrl}}"], "path": ["clients"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Empresa Demo\",\n  \"email\": \"contacto@demo.com\",\n  \"phone\": \"+525512345678\",\n  \"address\": \"CDMX\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List clients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clients?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["clients"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "lastKey", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/clients/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}"] }
+          }
+        },
+        {
+          "name": "Update client",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/clients/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Empresa Demo (editada)\",\n  \"phone\": \"+525599998888\",\n  \"address\": \"Monterrey\",\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete client (soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/clients/{{clientId}}", "host": ["{{baseUrl}}"], "path": ["clients", "{{clientId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Lookup device",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/devices/lookup/{{uuid}}", "host": ["{{baseUrl}}"], "path": ["devices", "lookup", "{{uuid}}"] }
+          }
+        },
+        {
+          "name": "Register device",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/devices", "host": ["{{baseUrl}}"], "path": ["devices"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Sensor Planta Baja\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["devices"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "clientId", "value": "{{clientId}}", "disabled": true },
+                { "key": "lastKey", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get device",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/devices/{{registrationId}}", "host": ["{{baseUrl}}"], "path": ["devices", "{{registrationId}}"] }
+          }
+        },
+        {
+          "name": "Update device",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/devices/{{registrationId}}", "host": ["{{baseUrl}}"], "path": ["devices", "{{registrationId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sensor Recepci\u00f3n\"\n}" }
+          }
+        },
+        {
+          "name": "Delete device (soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/devices/{{registrationId}}", "host": ["{{baseUrl}}"], "path": ["devices", "{{registrationId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@demo.com\",\n  \"name\": \"Juan P\u00e9rez\",\n  \"role\": \"client\",\n  \"clientId\": \"{{clientId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "paginationToken", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{username}}", "host": ["{{baseUrl}}"], "path": ["users", "{{username}}"] }
+          }
+        },
+        {
+          "name": "Update user role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users/{{username}}/role", "host": ["{{baseUrl}}"], "path": ["users", "{{username}}", "role"] },
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"collaborator\",\n  \"clientId\": \"{{clientId}}\"\n}" }
+          }
+        },
+        {
+          "name": "Set user status",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users/{{username}}/status", "host": ["{{baseUrl}}"], "path": ["users", "{{username}}", "status"] },
+            "body": { "mode": "raw", "raw": "{\n  \"action\": \"disable\"\n}" }
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{username}}", "host": ["{{baseUrl}}"], "path": ["users", "{{username}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seismic",
+      "item": [
+        {
+          "name": "Get latest reading",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/seismic/{{deviceId}}/latest", "host": ["{{baseUrl}}"], "path": ["seismic", "{{deviceId}}", "latest"] }
+          }
+        },
+        {
+          "name": "List readings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seismic/{{deviceId}}?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["seismic", "{{deviceId}}"],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "from", "value": "2026-01-01T00:00:00Z", "disabled": true },
+                { "key": "to", "value": "2026-01-31T23:59:59Z", "disabled": true },
+                { "key": "lastKey", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

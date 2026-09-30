@@ -1,0 +1,175 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_source": "skyalert-mini-api",
+  "resources": [
+    {
+      "_id": "wrk_skyalert",
+      "_type": "workspace",
+      "name": "SkyAlert Mini API",
+      "description": "API serverless de SkyAlert Lite (clients, devices, users, seismic)."
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_skyalert",
+      "name": "Base Environment",
+      "data": {
+        "baseUrl": "https://{apiId}.execute-api.us-east-1.amazonaws.com",
+        "accessToken": "",
+        "clientId": "",
+        "registrationId": "",
+        "deviceId": "",
+        "username": "",
+        "uuid": "ska-A1B2C3"
+      }
+    },
+
+    { "_id": "fld_clients", "_type": "request_group", "parentId": "wrk_skyalert", "name": "Clients", "metaSortKey": -100 },
+    {
+      "_id": "req_clients_create", "_type": "request", "parentId": "fld_clients", "name": "Create client",
+      "method": "POST", "url": "{{ _.baseUrl }}/clients",
+      "body": { "mimeType": "application/json", "text": "{\n  \"name\": \"Empresa Demo\",\n  \"email\": \"contacto@demo.com\",\n  \"phone\": \"+525512345678\",\n  \"address\": \"CDMX\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -100
+    },
+    {
+      "_id": "req_clients_list", "_type": "request", "parentId": "fld_clients", "name": "List clients",
+      "method": "GET", "url": "{{ _.baseUrl }}/clients",
+      "parameters": [{ "name": "limit", "value": "20" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -90
+    },
+    {
+      "_id": "req_clients_get", "_type": "request", "parentId": "fld_clients", "name": "Get client",
+      "method": "GET", "url": "{{ _.baseUrl }}/clients/{{ _.clientId }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -80
+    },
+    {
+      "_id": "req_clients_update", "_type": "request", "parentId": "fld_clients", "name": "Update client",
+      "method": "PUT", "url": "{{ _.baseUrl }}/clients/{{ _.clientId }}",
+      "body": { "mimeType": "application/json", "text": "{\n  \"name\": \"Empresa Demo (editada)\",\n  \"phone\": \"+525599998888\",\n  \"address\": \"Monterrey\",\n  \"status\": \"active\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -70
+    },
+    {
+      "_id": "req_clients_delete", "_type": "request", "parentId": "fld_clients", "name": "Delete client (soft)",
+      "method": "DELETE", "url": "{{ _.baseUrl }}/clients/{{ _.clientId }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -60
+    },
+
+    { "_id": "fld_devices", "_type": "request_group", "parentId": "wrk_skyalert", "name": "Devices", "metaSortKey": -90 },
+    {
+      "_id": "req_devices_lookup", "_type": "request", "parentId": "fld_devices", "name": "Lookup device",
+      "method": "GET", "url": "{{ _.baseUrl }}/devices/lookup/{{ _.uuid }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -100
+    },
+    {
+      "_id": "req_devices_register", "_type": "request", "parentId": "fld_devices", "name": "Register device",
+      "method": "POST", "url": "{{ _.baseUrl }}/devices",
+      "body": { "mimeType": "application/json", "text": "{\n  \"uuid\": \"{{ _.uuid }}\",\n  \"clientId\": \"{{ _.clientId }}\",\n  \"name\": \"Sensor Planta Baja\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -90
+    },
+    {
+      "_id": "req_devices_list", "_type": "request", "parentId": "fld_devices", "name": "List devices",
+      "method": "GET", "url": "{{ _.baseUrl }}/devices",
+      "parameters": [
+        { "name": "limit", "value": "20" },
+        { "name": "clientId", "value": "{{ _.clientId }}", "disabled": true }
+      ],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -80
+    },
+    {
+      "_id": "req_devices_get", "_type": "request", "parentId": "fld_devices", "name": "Get device",
+      "method": "GET", "url": "{{ _.baseUrl }}/devices/{{ _.registrationId }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -70
+    },
+    {
+      "_id": "req_devices_update", "_type": "request", "parentId": "fld_devices", "name": "Update device",
+      "method": "PUT", "url": "{{ _.baseUrl }}/devices/{{ _.registrationId }}",
+      "body": { "mimeType": "application/json", "text": "{\n  \"name\": \"Sensor Recepci\u00f3n\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -60
+    },
+    {
+      "_id": "req_devices_delete", "_type": "request", "parentId": "fld_devices", "name": "Delete device (soft)",
+      "method": "DELETE", "url": "{{ _.baseUrl }}/devices/{{ _.registrationId }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -50
+    },
+
+    { "_id": "fld_users", "_type": "request_group", "parentId": "wrk_skyalert", "name": "Users", "metaSortKey": -80 },
+    {
+      "_id": "req_users_create", "_type": "request", "parentId": "fld_users", "name": "Create user",
+      "method": "POST", "url": "{{ _.baseUrl }}/users",
+      "body": { "mimeType": "application/json", "text": "{\n  \"email\": \"user@demo.com\",\n  \"name\": \"Juan P\u00e9rez\",\n  \"role\": \"client\",\n  \"clientId\": \"{{ _.clientId }}\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -100
+    },
+    {
+      "_id": "req_users_list", "_type": "request", "parentId": "fld_users", "name": "List users",
+      "method": "GET", "url": "{{ _.baseUrl }}/users",
+      "parameters": [{ "name": "limit", "value": "20" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -90
+    },
+    {
+      "_id": "req_users_get", "_type": "request", "parentId": "fld_users", "name": "Get user",
+      "method": "GET", "url": "{{ _.baseUrl }}/users/{{ _.username }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -80
+    },
+    {
+      "_id": "req_users_role", "_type": "request", "parentId": "fld_users", "name": "Update user role",
+      "method": "PUT", "url": "{{ _.baseUrl }}/users/{{ _.username }}/role",
+      "body": { "mimeType": "application/json", "text": "{\n  \"role\": \"collaborator\",\n  \"clientId\": \"{{ _.clientId }}\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -70
+    },
+    {
+      "_id": "req_users_status", "_type": "request", "parentId": "fld_users", "name": "Set user status",
+      "method": "PUT", "url": "{{ _.baseUrl }}/users/{{ _.username }}/status",
+      "body": { "mimeType": "application/json", "text": "{\n  \"action\": \"disable\"\n}" },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -60
+    },
+    {
+      "_id": "req_users_delete", "_type": "request", "parentId": "fld_users", "name": "Delete user",
+      "method": "DELETE", "url": "{{ _.baseUrl }}/users/{{ _.username }}",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -50
+    },
+
+    { "_id": "fld_seismic", "_type": "request_group", "parentId": "wrk_skyalert", "name": "Seismic", "metaSortKey": -70 },
+    {
+      "_id": "req_seismic_latest", "_type": "request", "parentId": "fld_seismic", "name": "Get latest reading",
+      "method": "GET", "url": "{{ _.baseUrl }}/seismic/{{ _.deviceId }}/latest",
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -100
+    },
+    {
+      "_id": "req_seismic_list", "_type": "request", "parentId": "fld_seismic", "name": "List readings",
+      "method": "GET", "url": "{{ _.baseUrl }}/seismic/{{ _.deviceId }}",
+      "parameters": [
+        { "name": "limit", "value": "50" },
+        { "name": "from", "value": "2026-01-01T00:00:00Z", "disabled": true },
+        { "name": "to", "value": "2026-01-31T23:59:59Z", "disabled": true }
+      ],
+      "authentication": { "type": "bearer", "token": "{{ _.accessToken }}" },
+      "metaSortKey": -90
+    }
+  ]
+}
