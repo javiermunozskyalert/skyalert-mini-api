@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { UserClaims, isAdmin } from '../../../shared/auth';
-import { success, badRequest, forbidden, notFound, serverError } from '../../../shared/response';
+import { UserClaims } from '../../../shared/auth';
+import { success, badRequest, notFound, serverError } from '../../../shared/response';
 import { findGpsDeviceByUuid } from '../../../shared/gps-devices';
 import { logger } from '../../../shared/logger';
 
@@ -11,15 +11,12 @@ const UUID_PATTERN = /^ska-[A-Za-z0-9]{6}$/;
  * GET /devices/lookup/{uuid}
  * Se usa antes de registrar el device en skyalert (para confirmar que el
  * dispositivo físico existe y está reportando en el GPS tracker).
+ * Accesible por cualquier rol autenticado.
  */
 export async function lookupDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
-  claims: UserClaims
+  _claims: UserClaims
 ): Promise<APIGatewayProxyResultV2> {
-  if (!isAdmin(claims)) {
-    return forbidden('Only admin users can look up devices');
-  }
-
   // path: /devices/lookup/{uuid}
   const uuid = event.pathParameters?.proxy?.replace(/^lookup\//, '') ?? '';
 

@@ -20,6 +20,11 @@ const RegisterDeviceSchema = z.object({
  * Registra un device en skyalert vinculándolo al cliente/usuario.
  * POST /devices
  *
+ * Accesible por cualquier rol autenticado:
+ *  - admin/internal → pueden registrar en cualquier clientId (el del body).
+ *  - client/collaborator → el clientId se fuerza al del propio usuario
+ *    (se ignora el del body) para preservar el aislamiento multi-tenant.
+ *
  * Flujo:
  *  1. Valida que el device existe en gps-tracker-devices (por uuid_device).
  *  2. Crea el registro en skyalert-stg-devices guardando SOLO el device_id
@@ -31,10 +36,6 @@ export async function registerDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   claims: UserClaims
 ): Promise<APIGatewayProxyResultV2> {
-  if (!isAdmin(claims)) {
-    return forbidden('Only admin users can register devices');
-  }
-
   const body = JSON.parse(event.body ?? '{}');
   const validation = RegisterDeviceSchema.safeParse(body);
 
@@ -42,7 +43,18 @@ export async function registerDevice(
     return badRequest(validation.error.issues.map((i) => i.message).join(', '));
   }
 
-  const { uuid, clientId, name } = validation.data;
+  const { uuid, name } = validation.data;
+
+  // admin/internal usan el clientId del body; el resto, el suyo propio.
+  let clientId: string;
+  if (isAdmin(claims)) {
+    clientId = validation.data.clientId;
+  } else {
+    if (!claims.clientId) {
+      return forbidden('Your user is not associated with a client');
+    }
+    clientId = claims.clientId;
+  }
 
   try {
     // 1. Validar que el device existe en gps-tracker-devices
