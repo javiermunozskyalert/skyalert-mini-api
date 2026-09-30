@@ -49,12 +49,43 @@ export class ApiStack extends cdk.Stack {
       };
     }
 
-    // --- Cognito JWT Authorizer ---
-    const authorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer(
-      'CognitoAuthorizer',
-      `https://cognito-idp.${config.region}.amazonaws.com/${userPool.userPoolId}`,
+    // --- Lambda Authorizer dual (web Cognito + app legacy) ---
+    // Valida tanto los JWT de Cognito (Bearer, dashboard web) como los JWT HS256
+    // del backend legacy (esquema "JWT", app iOS). Los usuarios de la app legacy
+    // se fuerzan a rol "client" y su tenant es "legacy#<sub>".
+    //
+    // El secreto HS256 del legacy se replica a un SSM del propio account de
+    // mini-api: /skyalert-mini-api/{envName}/jwt.secretOrKey (SecureString).
+    const legacySecretParam = `/skyalert-mini-api/${config.envName}/jwt.secretOrKey`;
+
+    const authorizerFn = createLambdaFunction(this, 'AuthorizerFunction', {
+      config,
+      entry: 'src/functions/authorizer/handler.ts',
+      environment: {
+        COGNITO_ISSUER: `https://cognito-idp.${config.region}.amazonaws.com/${userPool.userPoolId}`,
+        LEGACY_ISSUER: 'api.v3.skyalert',
+        LEGACY_JWT_SECRET_PARAM: legacySecretParam,
+      },
+    });
+
+    // Permiso de lectura del secreto compartido del legacy (SSM SecureString).
+    authorizerFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['ssm:GetParameter'],
+        resources: [
+          `arn:aws:ssm:${config.region}:${cdk.Stack.of(this).account}:parameter${legacySecretParam}`,
+        ],
+      })
+    );
+
+    const authorizer = new apigatewayv2Authorizers.HttpLambdaAuthorizer(
+      'DualAuthorizer',
+      authorizerFn,
       {
-        jwtAudience: ['placeholder'], // Se reemplaza con el client ID real post-deploy
+        responseTypes: [apigatewayv2Authorizers.HttpLambdaResponseType.SIMPLE],
+        identitySource: ['$request.header.Authorization'],
+        resultsCacheTtl: cdk.Duration.minutes(5),
       }
     );
 
@@ -149,7 +180,7 @@ export class ApiStack extends cdk.Stack {
 
   private addRoutes(
     httpApi: apigatewayv2.HttpApi,
-    authorizer: apigatewayv2Authorizers.HttpJwtAuthorizer,
+    authorizer: apigatewayv2Authorizers.HttpLambdaAuthorizer,
     basePath: string,
     handler: lambda.IFunction
   ): void {

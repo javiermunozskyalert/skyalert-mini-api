@@ -1,24 +1,64 @@
-import { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
+import {
+  APIGatewayProxyEventV2WithJWTAuthorizer,
+  APIGatewayProxyEventV2WithLambdaAuthorizer,
+} from 'aws-lambda';
 
 /** Roles disponibles, alineados con los Cognito Groups del User Pool. */
 export type Role = 'admin' | 'internal' | 'client' | 'collaborator';
 
+/** Contexto que produce el Lambda Authorizer (src/functions/authorizer). */
+export interface AuthorizerContext {
+  source: 'cognito' | 'legacy';
+  sub: string;
+  email: string;
+  /** Rol(es) como string separado por comas (ej. "admin,internal" o "client"). */
+  role: string;
+  clientId: string;
+}
+
 export interface UserClaims {
   sub: string;
   email: string;
-  /** Grupos de Cognito a los que pertenece el usuario (claim cognito:groups). */
+  /** Grupos/roles del usuario, normalizados a array. */
   groups: Role[];
   clientId?: string;
 }
 
+/** Evento con cualquiera de los dos authorizers soportados. */
+type AuthEvent =
+  | APIGatewayProxyEventV2WithLambdaAuthorizer<AuthorizerContext>
+  | APIGatewayProxyEventV2WithJWTAuthorizer;
+
 /**
- * Extrae claims del JWT ya validado por API Gateway + Cognito Authorizer.
- * No hace validación adicional — API Gateway ya verificó la firma.
+ * Extrae claims del token ya validado por API Gateway.
+ *
+ * Soporta dos authorizers:
+ *  - Lambda Authorizer (web Cognito + app legacy): datos en authorizer.lambda.
+ *  - JWT Authorizer nativo (legado): datos en authorizer.jwt.claims.
+ *
+ * Regla de seguridad: los tokens de origen "legacy" (app) NUNCA obtienen rol
+ * admin/internal — se fuerzan a "client" aquí como defensa en profundidad,
+ * independientemente de lo que traiga el contexto.
  */
-export function extractClaims(
-  event: APIGatewayProxyEventV2WithJWTAuthorizer
-): UserClaims {
-  const claims = event.requestContext.authorizer.jwt.claims;
+export function extractClaims(event: AuthEvent): UserClaims {
+  const authorizer = event.requestContext.authorizer;
+
+  // Lambda Authorizer → contexto en `lambda`
+  if ('lambda' in authorizer && authorizer.lambda) {
+    const ctx = authorizer.lambda as AuthorizerContext;
+    const isLegacy = ctx.source === 'legacy';
+    const roleStr = isLegacy ? 'client' : ctx.role ?? '';
+
+    return {
+      sub: ctx.sub,
+      email: ctx.email,
+      groups: parseGroups(roleStr),
+      clientId: ctx.clientId || undefined,
+    };
+  }
+
+  // JWT Authorizer nativo (compatibilidad)
+  const claims = (authorizer as APIGatewayProxyEventV2WithJWTAuthorizer['requestContext']['authorizer']).jwt.claims;
 
   return {
     sub: claims.sub as string,
