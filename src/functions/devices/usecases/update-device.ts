@@ -53,6 +53,7 @@ export async function updateDevice(
         ExpressionAttributeValues: {
           ':name': validation.data.name,
           ':now': new Date().toISOString(),
+          ':inactive': 'inactive',
         },
         ConditionExpression: 'attribute_exists(SK) AND status_device <> :inactive',
         ReturnValues: 'ALL_NEW',
