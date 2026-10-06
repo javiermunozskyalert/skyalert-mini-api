@@ -63,7 +63,21 @@ export async function registerDevice(
       return notFound(`No GPS device found with uuid ${uuid}`);
     }
 
-    const gpsDeviceId = gpsDevice.device_id;
+    // La tabla GPS indexa el uuid con device_id = "uuid#<uuid>" y apunta al
+    // device físico real en `reserved_for`. Ese es el gpsDeviceId a vincular.
+    const gpsDeviceId = gpsDevice.reserved_for;
+    if (!gpsDeviceId) {
+      return notFound(`UUID ${uuid} is not linked to a physical device`);
+    }
+
+    // Solo se puede dar de alta un device que esté "inactive".
+    // Cualquier otro status (o ausente) significa que ya está asignado/no disponible.
+    if (gpsDevice.status !== 'inactive') {
+      return badRequest(
+        `Device ${uuid} cannot be registered: status is "${gpsDevice.status ?? 'unknown'}" (must be "inactive")`
+      );
+    }
+
     const now = new Date().toISOString();
     const registrationId = randomUUID();
 

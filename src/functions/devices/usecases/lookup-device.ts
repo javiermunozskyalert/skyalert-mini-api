@@ -31,10 +31,16 @@ export async function lookupDevice(
       return notFound(`No device found with uuid ${uuid}`);
     }
 
+    // Solo se puede dar de alta si el device físico está "inactive".
+    // Cualquier otro status (o ausente) → no se puede.
+    const status = gpsDevice.status ?? null;
+    const canRegister = status === 'inactive';
+
     return success({
-      deviceId: gpsDevice.device_id,
-      uuid: gpsDevice.uuid_device,
-      statusDevice: gpsDevice.status_device,
+      uuid,
+      reservedFor: gpsDevice.reserved_for ?? null,
+      status,
+      canRegister,
       exists: true,
     });
   } catch (error: unknown) {
