@@ -4,6 +4,7 @@ import { UserClaims, isAdmin } from '../../../shared/auth';
 import { success, forbidden, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
 import { logger } from '../../../shared/logger';
+import { ensureLegacyCustomerProvisioned } from '../../../shared/provisioning';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
@@ -12,6 +13,9 @@ const TABLE_NAME = process.env.TABLE_NAME!;
  *
  *  - admin / internal → ven TODOS los devices (todas las organizaciones).
  *  - client / collaborator → ven solo los de SU compañía (su clientId).
+ *
+ * Para usuarios legacy, al ser el primer endpoint que consulta el webview,
+ * se asegura el auto-provisioning del customer antes de responder.
  *
  * GET /devices
  *   admin/internal: opcionalmente ?clientId=... para filtrar una compañía.
@@ -25,6 +29,10 @@ export async function listDevices(
   const requestedClientId = event.queryStringParameters?.clientId;
 
   try {
+    // Auto-provisioning idempotente del customer legacy (no-op si ya existe
+    // o si no es un usuario legacy).
+    await ensureLegacyCustomerProvisioned(claims);
+
     // Determinar el scope según el rol
     if (isAdmin(claims)) {
       // admin/internal → ven todo; si mandan clientId, filtran esa compañía
