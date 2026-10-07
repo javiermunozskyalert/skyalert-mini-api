@@ -31,15 +31,15 @@ export async function lookupDevice(
       return notFound(`No device found with uuid ${uuid}`);
     }
 
-    // Solo se puede dar de alta si el device físico está "inactive".
-    // Cualquier otro status (o ausente) → no se puede.
-    const status = gpsDevice.status ?? null;
-    const canRegister = status === 'inactive';
+    // Se puede dar de alta si status_device NO existe o es "inactive".
+    // Cualquier otro valor → no se puede (ya asignado / no disponible).
+    const statusDevice = gpsDevice.status_device ?? null;
+    const canRegister = statusDevice === null || statusDevice === 'inactive';
 
     return success({
       uuid,
       reservedFor: gpsDevice.reserved_for ?? null,
-      status,
+      statusDevice,
       canRegister,
       exists: true,
     });

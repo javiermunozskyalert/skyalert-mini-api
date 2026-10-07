@@ -70,11 +70,12 @@ export async function registerDevice(
       return notFound(`UUID ${uuid} is not linked to a physical device`);
     }
 
-    // Solo se puede dar de alta un device que esté "inactive".
-    // Cualquier otro status (o ausente) significa que ya está asignado/no disponible.
-    if (gpsDevice.status !== 'inactive') {
+    // Solo se puede dar de alta si status_device NO existe o es "inactive".
+    // Cualquier otro valor significa que ya está asignado/no disponible.
+    const statusDevice = gpsDevice.status_device ?? null;
+    if (statusDevice !== null && statusDevice !== 'inactive') {
       return badRequest(
-        `Device ${uuid} cannot be registered: status is "${gpsDevice.status ?? 'unknown'}" (must be "inactive")`
+        `Device ${uuid} cannot be registered: status_device is "${statusDevice}" (must be absent or "inactive")`
       );
     }
 
