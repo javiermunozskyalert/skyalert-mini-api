@@ -7,6 +7,23 @@ import { logger } from '../../../shared/logger';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
+/** Expone solo los campos de negocio del device (omite PK/SK internos). */
+function toDeviceResponse(item: Record<string, unknown>) {
+  return {
+    registrationId: item.registrationId ?? null,
+    clientId: item.clientId ?? null,
+    name: item.name ?? null,
+    address: item.address ?? null,
+    latitude: item.latitude ?? null,
+    longitude: item.longitude ?? null,
+    gpsDeviceId: item.gpsDeviceId ?? null,
+    statusDevice: item.status_device ?? null,
+    createdAt: item.createdAt ?? null,
+    updatedAt: item.updatedAt ?? null,
+    createdBy: item.createdBy ?? null,
+  };
+}
+
 /**
  * Obtiene un device por su registrationId, respetando la visibilidad del rol:
  *  - admin/internal → cualquier device (búsqueda global).
@@ -36,7 +53,7 @@ export async function getDevice(
       );
       const item = result.Items?.[0];
       if (!item) return notFound(`Device ${registrationId} not found`);
-      return success(item);
+      return success(toDeviceResponse(item));
     }
 
     // client/collaborator → solo dentro de su compañía
@@ -58,7 +75,7 @@ export async function getDevice(
       return notFound(`Device ${registrationId} not found`);
     }
 
-    return success(result.Item);
+    return success(toDeviceResponse(result.Item));
   } catch (error: unknown) {
     logger.error('Failed to get device', {
       error: error instanceof Error ? error.message : 'Unknown error',
