@@ -35,9 +35,73 @@
     { "key": "registrationId", "value": "", "type": "string" },
     { "key": "deviceId", "value": "", "type": "string" },
     { "key": "username", "value": "", "type": "string" },
-    { "key": "uuid", "value": "ska-A1B2C3", "type": "string" }
+    { "key": "uuid", "value": "ska-L0z4AD", "type": "string" },
+    { "key": "reservedFor", "value": "", "type": "string" }
   ],
   "item": [
+    {
+      "name": "Legacy app flow (webview)",
+      "description": "Flujo del webview de clients con token legacy (authScheme=JWT).\nOrden recomendado: 1) List my devices (auto-provisiona) → 2) Lookup device → 3) Register device.",
+      "item": [
+        {
+          "name": "1. List my devices (auto-provision)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/devices", "host": ["{{baseUrl}}"], "path": ["devices"] },
+            "description": "Primer endpoint del webview. Auto-provisiona el customer legacy y devuelve 200 con sus devices (vacío si es nuevo)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('respuesta con items', () => pm.expect(pm.response.json()).to.have.property('items'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Lookup device by uuid",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/devices/lookup/{{uuid}}", "host": ["{{baseUrl}}"], "path": ["devices", "lookup", "{{uuid}}"] },
+            "description": "Comprueba si el uuid se puede dar de alta (canRegister = status === 'inactive')."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const b = pm.response.json();",
+                  "  pm.test('canRegister === (status === inactive)', () => pm.expect(b.canRegister).to.eql(b.status === 'inactive'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Register device (requires inactive)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/devices", "host": ["{{baseUrl}}"], "path": ["devices"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Mi sensor\"\n}"
+            },
+            "description": "Da de alta el device en el tenant del usuario. Legacy ignora el clientId del body (usa el suyo). Falla con 400 si el device no está 'inactive'."
+          }
+        }
+      ]
+    },
     {
       "name": "Clients",
       "item": [
@@ -107,8 +171,26 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/devices/lookup/{{uuid}}", "host": ["{{baseUrl}}"], "path": ["devices", "lookup", "{{uuid}}"] }
-          }
+            "url": { "raw": "{{baseUrl}}/devices/lookup/{{uuid}}", "host": ["{{baseUrl}}"], "path": ["devices", "lookup", "{{uuid}}"] },
+            "description": "Verifica un device físico por uuid en gps-tracker-devices.\nResponde { uuid, reservedFor, status, canRegister, exists }.\ncanRegister = true solo si status === 'inactive'. Accesible por cualquier rol."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const b = pm.response.json();",
+                  "  pm.test('canRegister refleja status === inactive', function () {",
+                  "    pm.expect(b.canRegister).to.eql(b.status === 'inactive');",
+                  "  });",
+                  "  pm.collectionVariables.set('reservedFor', b.reservedFor || '');",
+                  "}"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Register device",
@@ -119,7 +201,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Sensor Planta Baja\"\n}"
-            }
+            },
+            "description": "Registra un device vinculado a un cliente.\n- Solo si el device físico está status='inactive' (si no → 400).\n- Legacy (rol client): el clientId del body se ignora, se fuerza su propio tenant (legacy#<sub>).\n- Admin/internal: usan el clientId del body."
           }
         },
         {
@@ -136,7 +219,8 @@
                 { "key": "clientId", "value": "{{clientId}}", "disabled": true },
                 { "key": "lastKey", "value": "", "disabled": true }
               ]
-            }
+            },
+            "description": "Lista los devices del tenant.\n- Legacy (rol client): primer endpoint del webview; auto-provisiona el customer (crea CLIENT legacy#<sub> si no existe) y devuelve 200 con sus devices (vacío si es nuevo).\n- Admin/internal: ven todos; ?clientId= filtra una compañía."
           }
         },
         {
