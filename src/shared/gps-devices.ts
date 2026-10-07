@@ -26,6 +26,9 @@ export interface GpsDevice {
   reserved_for?: string;
   /** estado administrativo real del device físico (ej: "inactive"). */
   status?: string;
+  /** coordenadas del device reportadas por el GPS tracker. */
+  latitude?: number;
+  longitude?: number;
   [key: string]: unknown;
 }
 

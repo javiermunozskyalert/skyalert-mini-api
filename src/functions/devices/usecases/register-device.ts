@@ -12,8 +12,12 @@ const TABLE_NAME = process.env.TABLE_NAME!;
 
 const RegisterDeviceSchema = z.object({
   uuid: z.string().regex(/^ska-[A-Za-z0-9]{6}$/, 'Invalid uuid format (expected ska-XXXXXX)'),
-  clientId: z.string().min(1),
+  // clientId es opcional: para legacy se fuerza al del token; admin/internal lo envían.
+  clientId: z.string().min(1).optional(),
   name: z.string().min(1).max(200),
+  address: z.string().max(500).optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
 });
 
 /**
@@ -43,11 +47,16 @@ export async function registerDevice(
     return badRequest(validation.error.issues.map((i) => i.message).join(', '));
   }
 
-  const { uuid, name } = validation.data;
+  const { uuid, name, address, latitude, longitude } = validation.data;
 
-  // admin/internal usan el clientId del body; el resto, el suyo propio.
+  // Resolución de clientId para ambos flujos:
+  //  - admin/internal: debe venir en el body (registran en cualquier tenant).
+  //  - client/collaborator (legacy o cognito): se fuerza al del token.
   let clientId: string;
   if (isAdmin(claims)) {
+    if (!validation.data.clientId) {
+      return badRequest('clientId is required for admin/internal users');
+    }
     clientId = validation.data.clientId;
   } else {
     if (!claims.clientId) {
@@ -89,6 +98,9 @@ export async function registerDevice(
       registrationId,
       clientId,
       name,
+      address: address ?? null,
+      latitude,
+      longitude,
       gpsDeviceId, // referencia al device en gps-tracker-devices
       status_device: 'active',
       createdAt: now,
@@ -118,6 +130,9 @@ export async function registerDevice(
       registrationId,
       clientId,
       name,
+      address: address ?? null,
+      latitude,
+      longitude,
       gpsDeviceId,
       statusDevice: 'active',
     });

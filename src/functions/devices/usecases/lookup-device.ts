@@ -41,6 +41,8 @@ export async function lookupDevice(
       reservedFor: gpsDevice.reserved_for ?? null,
       statusDevice,
       canRegister,
+      latitude: gpsDevice.latitude ?? null,
+      longitude: gpsDevice.longitude ?? null,
       exists: true,
     });
   } catch (error: unknown) {
