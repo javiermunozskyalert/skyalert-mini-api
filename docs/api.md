@@ -1,7 +1,7 @@
 # SkyAlert Mini API — Referencia de Endpoints
 
 API HTTP serverless (AWS API Gateway HTTP API + Lambda + DynamoDB + Cognito).
-Arquitectura **Serverless SOA**: un Lambda por dominio (`clients`, `devices`, `users`, `seismic`).
+Arquitectura **Serverless SOA**: un Lambda por dominio (`clients`, `devices`, `users`, `seismic`, `history_events`).
 
 ## Base URL
 
@@ -285,6 +285,44 @@ Respuesta `200`:
 ```json
 { "deviceId": "...", "items": [ /* lecturas */ ], "lastKey": "token-o-null" }
 ```
+
+---
+
+## 5. History Events - `/history_events`
+
+Historial de eventos (activaciones sísmicas) de la tabla `gps-tracker-activations`
+(otro proyecto), **filtrado por los devices asociados al customer del token**.
+Pensado para el webview legacy.
+
+### GET `/history_events` — Últimos eventos del tenant
+Rol: usuario con tenant (legacy/client). Devuelve los **últimos 10** eventos cuyos
+devices (`deviceIds_sent` ∪ `deviceIds_requested`) incluyan algún device del
+customer, ordenados del más reciente al más viejo. Sin paginación por ahora.
+
+Flujo: resuelve los devices del tenant (`DEVICE#<clientId>`), toma sus `gpsDeviceId`,
+escanea las activaciones e incluye las que intersectan. Cada evento muestra solo los
+devices del tenant que participaron (no todos los del evento global).
+
+Respuesta `200`:
+```json
+{
+  "items": [
+    {
+      "notificationId": "sim-1791411554218",
+      "timestamp": 1791411554222,
+      "impactAt": "2026-10-07T22:19:14.000Z",
+      "intensity": 1,
+      "command": "07;80",
+      "source": "simulation",
+      "latency_ms": 0.2,
+      "devices": [
+        { "gpsDeviceId": "2550000004", "registrationId": "...", "name": "Mi sensor" }
+      ]
+    }
+  ]
+}
+```
+Si el tenant no tiene devices → `{ "items": [] }`.
 
 ---
 
