@@ -95,9 +95,9 @@
             "url": { "raw": "{{baseUrl}}/devices", "host": ["{{baseUrl}}"], "path": ["devices"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Mi sensor\"\n}"
+              "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"name\": \"Mi sensor\",\n  \"address\": \"Av. Reforma 123, CDMX\",\n  \"latitude\": 19.400317,\n  \"longitude\": -99.28739\n}"
             },
-            "description": "Da de alta el device en el tenant del usuario. Legacy ignora el clientId del body (usa el suyo). Falla con 400 si el device no está 'inactive'."
+            "description": "Da de alta el device en el tenant del usuario. Legacy omite clientId (usa el suyo). Requiere status_device ausente o 'inactive' (si no → 400). latitude/longitude requeridos."
           }
         }
       ]
@@ -172,7 +172,7 @@
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/devices/lookup/{{uuid}}", "host": ["{{baseUrl}}"], "path": ["devices", "lookup", "{{uuid}}"] },
-            "description": "Verifica un device físico por uuid en gps-tracker-devices.\nResponde { uuid, reservedFor, status, canRegister, exists }.\ncanRegister = true solo si status === 'inactive'. Accesible por cualquier rol."
+            "description": "Verifica un device físico por uuid en gps-tracker-devices.\nResponde { uuid, reservedFor, statusDevice, canRegister, latitude, longitude, exists }.\ncanRegister = true si statusDevice está ausente o es 'inactive'. Accesible por cualquier rol."
           },
           "event": [
             {
@@ -182,8 +182,8 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "  const b = pm.response.json();",
-                  "  pm.test('canRegister refleja status === inactive', function () {",
-                  "    pm.expect(b.canRegister).to.eql(b.status === 'inactive');",
+                  "  pm.test('canRegister = statusDevice ausente o inactive', function () {",
+                  "    pm.expect(b.canRegister).to.eql(b.statusDevice == null || b.statusDevice === 'inactive');",
                   "  });",
                   "  pm.collectionVariables.set('reservedFor', b.reservedFor || '');",
                   "}"
@@ -200,9 +200,9 @@
             "url": { "raw": "{{baseUrl}}/devices", "host": ["{{baseUrl}}"], "path": ["devices"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"clientId\": \"{{clientId}}\",\n  \"name\": \"Sensor Planta Baja\"\n}"
+              "raw": "{\n  \"uuid\": \"{{uuid}}\",\n  \"name\": \"Sensor Planta Baja\",\n  \"address\": \"Av. Reforma 123, CDMX\",\n  \"latitude\": 19.400317,\n  \"longitude\": -99.28739\n}"
             },
-            "description": "Registra un device vinculado a un cliente.\n- Solo si el device físico está status='inactive' (si no → 400).\n- Legacy (rol client): el clientId del body se ignora, se fuerza su propio tenant (legacy#<sub>).\n- Admin/internal: usan el clientId del body."
+            "description": "Registra un device vinculado a un cliente.\n- Solo si status_device está ausente o 'inactive' (si no → 400).\n- Legacy (rol client): el clientId del body se ignora, se fuerza su propio tenant (legacy#<sub>); por eso no se envía.\n- Admin/internal: deben enviar clientId en el body.\n- Campos: uuid y name requeridos; latitude/longitude requeridos (rango válido); address opcional."
           }
         },
         {
@@ -237,7 +237,8 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/devices/{{registrationId}}", "host": ["{{baseUrl}}"], "path": ["devices", "{{registrationId}}"] },
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sensor Recepci\u00f3n\"\n}" }
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sensor Recepci\u00f3n\",\n  \"address\": \"Insurgentes Sur 1000, CDMX\",\n  \"latitude\": 19.3621,\n  \"longitude\": -99.1766\n}" },
+            "description": "Actualizaci\u00f3n PARCIAL: solo se modifican los campos presentes (al menos uno requerido). Campos opcionales: name (1-200), address (max 500), latitude (-90..90), longitude (-180..180). Body vac\u00edo -> 400. Respuesta normalizada."
           }
         },
         {
