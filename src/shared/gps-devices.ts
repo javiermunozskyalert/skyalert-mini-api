@@ -118,3 +118,31 @@ export async function findGpsDeviceUuidById(deviceId: string): Promise<string | 
   );
   return (result.Item?.device_uuid as string | undefined) ?? null;
 }
+
+/** Campos de conectividad leídos del device físico GPS. */
+export interface GpsConnectivityFields {
+  last_seen_at?: string | null;
+  connection_status?: string | null;
+}
+
+/**
+ * Lee los campos de conectividad (last_seen_at, connection_status) de un device
+ * físico por su device_id. Solo proyecta esos atributos para minimizar lectura.
+ * Devuelve null si el device no existe.
+ */
+export async function getGpsConnectivityFields(
+  deviceId: string
+): Promise<GpsConnectivityFields | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: GPS_DEVICES_TABLE,
+      Key: { device_id: deviceId },
+      ProjectionExpression: 'last_seen_at, connection_status',
+    })
+  );
+  if (!result.Item) return null;
+  return {
+    last_seen_at: (result.Item.last_seen_at as string | undefined) ?? null,
+    connection_status: (result.Item.connection_status as string | undefined) ?? null,
+  };
+}
