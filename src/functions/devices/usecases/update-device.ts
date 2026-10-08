@@ -3,6 +3,7 @@ import { UpdateCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
 import { success, badRequest, notFound, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
+import { toDeviceResponse } from '../../../shared/device-response';
 import { logger } from '../../../shared/logger';
 import { z } from 'zod';
 
@@ -19,23 +20,6 @@ const UpdateDeviceSchema = z
     (data) => Object.values(data).some((v) => v !== undefined),
     { message: 'At least one field (name, address, latitude, longitude) is required' }
   );
-
-/** Expone solo los campos de negocio del device (omite PK/SK internos). */
-function toDeviceResponse(item: Record<string, unknown>) {
-  return {
-    registrationId: item.registrationId ?? null,
-    clientId: item.clientId ?? null,
-    name: item.name ?? null,
-    address: item.address ?? null,
-    latitude: item.latitude ?? null,
-    longitude: item.longitude ?? null,
-    gpsDeviceId: item.gpsDeviceId ?? null,
-    statusDevice: item.status_device ?? null,
-    createdAt: item.createdAt ?? null,
-    updatedAt: item.updatedAt ?? null,
-    createdBy: item.createdBy ?? null,
-  };
-}
 
 /**
  * Actualiza los datos editables de un device: name, address, latitude, longitude.

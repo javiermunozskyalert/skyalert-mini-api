@@ -7,6 +7,21 @@ import { logger } from '../../../shared/logger';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
+/** Expone solo los campos de negocio del cliente (omite PK/SK internos). */
+function toClientResponse(item: Record<string, unknown>) {
+  return {
+    clientId: item.clientId ?? null,
+    name: item.name ?? null,
+    email: item.email ?? null,
+    phone: item.phone ?? null,
+    address: item.address ?? null,
+    status: item.status ?? null,
+    createdAt: item.createdAt ?? null,
+    updatedAt: item.updatedAt ?? null,
+    createdBy: item.createdBy ?? null,
+  };
+}
+
 export async function listClients(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   claims: UserClaims
@@ -34,7 +49,7 @@ export async function listClients(
   );
 
   return success({
-    items: result.Items ?? [],
+    items: (result.Items ?? []).map(toClientResponse),
     lastKey: result.LastEvaluatedKey
       ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
       : null,

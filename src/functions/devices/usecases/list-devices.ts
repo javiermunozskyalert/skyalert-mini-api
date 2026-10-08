@@ -3,40 +3,17 @@ import { QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
 import { success, forbidden, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
-import { getGpsConnectivityFields } from '../../../shared/gps-devices';
-import { computeConnectivityStatus } from '../../../shared/connectivity';
+import { toDeviceWithConnectivity, DeviceWithConnectivity } from '../../../shared/device-response';
 import { logger } from '../../../shared/logger';
 import { ensureLegacyCustomerProvisioned } from '../../../shared/provisioning';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
-/**
- * Enriquece un item de device con el estado de conectividad derivado, leído
- * del device físico GPS (gpsDeviceId). Si no hay gpsDeviceId o no existe el
- * device GPS → "disconnected".
- */
-async function enrichWithConnectivity(
-  item: Record<string, unknown>
-): Promise<Record<string, unknown>> {
-  const gpsDeviceId = item.gpsDeviceId;
-  const fields =
-    typeof gpsDeviceId === 'string' ? await getGpsConnectivityFields(gpsDeviceId) : null;
-  const { connectivity_status, last_seen_seconds_ago, connection_status } =
-    computeConnectivityStatus(fields ?? {});
-  return {
-    ...item,
-    connectivity_status,
-    last_seen_seconds_ago,
-    last_seen_at: fields?.last_seen_at ?? null,
-    connection_status,
-  };
-}
-
-/** Enriquece una lista de devices en paralelo. */
+/** Normaliza y enriquece una lista de devices en paralelo (camelCase, sin PK/SK). */
 async function enrichItems(
   items: Record<string, unknown>[]
-): Promise<Record<string, unknown>[]> {
-  return Promise.all(items.map(enrichWithConnectivity));
+): Promise<DeviceWithConnectivity[]> {
+  return Promise.all(items.map((it) => toDeviceWithConnectivity(it)));
 }
 
 /**

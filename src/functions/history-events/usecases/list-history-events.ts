@@ -96,7 +96,7 @@ export async function listHistoryEvents(
       intensity: ev.intensity ?? null,
       command: ev.command ?? null,
       source: ev.source ?? null,
-      latency_ms: ev.latency_ms ?? null,
+      latencyMs: ev.latency_ms ?? null,
       devices: tenantDevices.map((gpsDeviceId) => ({
         gpsDeviceId,
         registrationId: deviceMap.get(gpsDeviceId)?.registrationId ?? null,
