@@ -186,19 +186,19 @@ Cada device se enriquece con el estado derivado del device físico GPS:
 
 | Campo | Descripción |
 |---|---|
-| `connection_status` | Estado del socket TCP (crudo del EC2): `online` / `offline` / `null` |
-| `connectivity_status` | Derivado de `last_seen_at`: `active` / `idle` / `stale` / `disconnected` |
-| `last_seen_seconds_ago` | Segundos desde la última posición (o `null`) |
-| `last_seen_at` | Timestamp ISO crudo de la última posición |
+| `connectionStatus` | Estado del socket TCP (crudo del EC2): `online` / `offline` / `null` |
+| `connectivityStatus` | Derivado de `lastSeenAt`: `active` / `idle` / `stale` / `disconnected` |
+| `lastSeenSecondsAgo` | Segundos desde la última posición (o `null`) |
+| `lastSeenAt` | Timestamp ISO crudo de la última posición |
 
-Reglas de `connectivity_status` (umbrales 120s/300s):
-- `offline` o sin `last_seen_at` → `disconnected`
+Reglas de `connectivityStatus` (umbrales 120s/300s):
+- `offline` o sin `lastSeenAt` → `disconnected`
 - `< 120s` (se perdió ≤1 reporte) → `active`
 - `120–300s` → `idle`
 - `>= 300s` → `stale`
 
-Las dos dimensiones son independientes: un device puede estar `connection_status: online`
-pero `connectivity_status: idle/stale` (conectado, sin posición reciente — caso keep-alive).
+Las dos dimensiones son independientes: un device puede estar `connectionStatus: online`
+pero `connectivityStatus: idle/stale` (conectado, sin posición reciente — caso keep-alive).
 
 Ejemplo de item:
 ```json
@@ -206,8 +206,8 @@ Ejemplo de item:
   "registrationId": "...", "name": "Mi sensor", "address": "...",
   "latitude": 19.4, "longitude": -99.1, "gpsDeviceId": "2550000004",
   "statusDevice": "active",
-  "connectivity_status": "active", "connection_status": "online",
-  "last_seen_seconds_ago": 35, "last_seen_at": "2026-10-08T18:15:09.000Z",
+  "connectivityStatus": "active", "connectionStatus": "online",
+  "lastSeenSecondsAgo": 35, "lastSeenAt": "2026-10-08T18:15:09.000Z",
   "createdAt": "...", "updatedAt": "...", "createdBy": "..."
 }
 ```
@@ -325,7 +325,7 @@ Respuesta `200`:
       "intensity": 1,
       "command": "07;80",
       "source": "simulation",
-      "latency_ms": 0.2,
+      "latencyMs": 0.2,
       "devices": [
         { "gpsDeviceId": "2550000004", "registrationId": "...", "name": "Mi sensor" }
       ]

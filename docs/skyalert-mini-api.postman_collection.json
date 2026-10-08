@@ -706,7 +706,7 @@
                 "history-events"
               ]
             },
-            "description": "GET /history_events. items: [{ notificationId, timestamp, impactAt, intensity, command, source, latency_ms, devices:[{gpsDeviceId, registrationId, name}] }]. Filtra por los devices del customer del token. Requiere Authorization: JWT <token> (legacy)."
+            "description": "GET /history_events. items: [{ notificationId, timestamp, impactAt, intensity, command, source, latencyMs, devices:[{gpsDeviceId, registrationId, name}] }]. Filtra por los devices del customer del token. Requiere Authorization: JWT <token> (legacy)."
           },
           "event": [
             {
