@@ -214,9 +214,9 @@ Ejemplo de item:
 }
 ```
 
-### PUT `/v1/devices/{registrationId}` — Actualizar (parcial)
-Rol: todos (según scope). Actualización parcial: solo se modifican los campos presentes;
-al menos uno es requerido. Body (todos opcionales):
+### PUT `/v1/devices/{registrationId}` — Reemplazar (total)
+Rol: todos (según scope). Reemplazo total de los campos editables.
+`name`, `latitude`, `longitude` son **requeridos**; `address` opcional (si no se envía, se resetea a `null`).
 ```json
 {
   "name": "Sensor Recepción",
@@ -225,10 +225,17 @@ al menos uno es requerido. Body (todos opcionales):
   "longitude": -99.1766
 }
 ```
-- `name`: 1–200. `address`: máx 500. `latitude`: -90 a 90. `longitude`: -180 a 180.
+- Faltan campos requeridos → `400` (`VALIDATION_ERROR`).
+
+### PATCH `/v1/devices/{registrationId}` — Actualizar (parcial)
+Rol: todos (según scope). Solo se modifican los campos presentes; al menos uno es requerido.
+Campos opcionales: `name` (1–200), `address` (máx 500), `latitude` (-90..90), `longitude` (-180..180).
+```json
+{ "name": "Sensor Recepción" }
+```
 - Body vacío → `400` ("At least one field... is required").
 
-Respuesta `200`: device normalizado (sin PK/SK, `statusDevice` camelCase), con `updatedAt` refrescado.
+Ambos (`PUT`/`PATCH`) → Respuesta `200`: device normalizado (camelCase, sin PK/SK), `updatedAt` refrescado.
 
 ### DELETE `/v1/devices/{registrationId}` — Soft delete
 Rol: todos (según scope). Pone `status_device = inactive` en skyalert y en `gps-tracker-devices`.

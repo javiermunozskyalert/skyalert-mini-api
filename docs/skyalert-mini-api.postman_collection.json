@@ -426,7 +426,7 @@
           }
         },
         {
-          "name": "Update device",
+          "name": "Replace device (PUT)",
           "request": {
             "method": "PUT",
             "header": [
@@ -448,9 +448,37 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Sensor Recepción\",\n  \"address\": \"Insurgentes Sur 1000, CDMX\",\n  \"latitude\": 19.3621,\n  \"longitude\": -99.1766\n}"
+              "raw": "{\n  \"name\": \"Sensor Recepcion\",\n  \"address\": \"Insurgentes Sur 1000, CDMX\",\n  \"latitude\": 19.3621,\n  \"longitude\": -99.1766\n}"
             },
-            "description": "Actualización PARCIAL: solo se modifican los campos presentes (al menos uno requerido). Campos opcionales: name (1-200), address (max 500), latitude (-90..90), longitude (-180..180). Body vacío -> 400. Respuesta normalizada."
+            "description": "Reemplazo TOTAL. name/latitude/longitude requeridos; address opcional (si falta, se resetea a null). Respuesta normalizada."
+          }
+        },
+        {
+          "name": "Update device (PATCH, partial)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/devices/{{registrationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "devices",
+                "{{registrationId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Solo nombre editado\"\n}"
+            },
+            "description": "Actualizacion PARCIAL: solo los campos presentes (al menos uno). Campos: name, address, latitude, longitude. Body vacio -> 400."
           }
         },
         {

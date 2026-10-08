@@ -45,9 +45,9 @@ export async function handler(
       return await getDevice(event, claims);
     }
 
-    // PUT|PATCH /devices/{registrationId} — actualiza (parcial). Ambos aceptados.
+    // PUT|PATCH /devices/{registrationId} — PUT reemplaza (total), PATCH parcial.
     if ((method === 'PUT' || method === 'PATCH') && path.startsWith('/devices/')) {
-      return await updateDevice(event, claims);
+      return await updateDevice(event, claims, method);
     }
 
     // DELETE /devices/{registrationId} — soft delete (status_device = inactive)

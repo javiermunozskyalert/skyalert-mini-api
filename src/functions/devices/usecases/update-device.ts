@@ -9,40 +9,71 @@ import { z } from 'zod';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
-const UpdateDeviceSchema = z
+/** PATCH: actualización parcial — todos opcionales, al menos uno. */
+const PatchDeviceSchema = z
   .object({
     name: z.string().min(1).max(200).optional(),
     address: z.string().max(500).optional(),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
   })
-  .refine(
-    (data) => Object.values(data).some((v) => v !== undefined),
-    { message: 'At least one field (name, address, latitude, longitude) is required' }
-  );
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: 'At least one field (name, address, latitude, longitude) is required',
+  });
+
+/** PUT: reemplazo total — name/latitude/longitude requeridos; address opcional (null si falta). */
+const PutDeviceSchema = z.object({
+  name: z.string().min(1).max(200),
+  address: z.string().max(500).optional(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export type UpdateMode = 'PUT' | 'PATCH';
 
 /**
  * Actualiza los datos editables de un device: name, address, latitude, longitude.
- * PUT /devices/{registrationId}
  *
- * Actualización parcial: solo se modifican los campos presentes en el body.
+ * - PUT  /devices/{registrationId} → reemplazo total: name/latitude/longitude
+ *   requeridos; address no enviado se resetea a null.
+ * - PATCH /devices/{registrationId} → actualización parcial: solo los campos
+ *   presentes; al menos uno requerido.
  *
  * Visibilidad por rol (misma lógica que list/get):
- *  - admin/internal → pueden actualizar cualquier device (búsqueda global).
+ *  - admin/internal → cualquier device (búsqueda global).
  *  - client/collaborator → solo devices de su compañía.
  *
  * El status del hardware se maneja en gps-tracker-devices, no aquí.
  */
 export async function updateDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
-  claims: UserClaims
+  claims: UserClaims,
+  mode: UpdateMode = 'PATCH'
 ): Promise<APIGatewayProxyResultV2> {
   const registrationId = event.pathParameters?.proxy ?? '';
-
   const body = JSON.parse(event.body ?? '{}');
-  const validation = UpdateDeviceSchema.safeParse(body);
-  if (!validation.success) {
-    return badRequest(validation.error.issues.map((i) => i.message).join(', '));
+
+  // Campos a escribir: para PUT, todos los editables (reemplazo); para PATCH, los presentes.
+  const toWrite: { name?: string; address?: string | null; latitude?: number; longitude?: number } = {};
+
+  if (mode === 'PUT') {
+    const v = PutDeviceSchema.safeParse(body);
+    if (!v.success) {
+      return badRequest(v.error.issues.map((i) => i.message).join(', '), 'VALIDATION_ERROR');
+    }
+    toWrite.name = v.data.name;
+    toWrite.latitude = v.data.latitude;
+    toWrite.longitude = v.data.longitude;
+    toWrite.address = v.data.address ?? null; // reemplazo: ausente → null
+  } else {
+    const v = PatchDeviceSchema.safeParse(body);
+    if (!v.success) {
+      return badRequest(v.error.issues.map((i) => i.message).join(', '), 'VALIDATION_ERROR');
+    }
+    if (v.data.name !== undefined) toWrite.name = v.data.name;
+    if (v.data.address !== undefined) toWrite.address = v.data.address;
+    if (v.data.latitude !== undefined) toWrite.latitude = v.data.latitude;
+    if (v.data.longitude !== undefined) toWrite.longitude = v.data.longitude;
   }
 
   try {
@@ -52,8 +83,7 @@ export async function updateDevice(
       return notFound(`Device ${registrationId} not found`);
     }
 
-    // Construir la expresión de actualización dinámicamente (solo campos presentes).
-    const data = validation.data;
+    // Construir la expresión de actualización.
     const setParts: string[] = ['updatedAt = :now'];
     const names: Record<string, string> = {};
     const values: Record<string, unknown> = {
@@ -61,22 +91,22 @@ export async function updateDevice(
       ':inactive': 'inactive',
     };
 
-    if (data.name !== undefined) {
+    if (toWrite.name !== undefined) {
       setParts.push('#name = :name');
       names['#name'] = 'name';
-      values[':name'] = data.name;
+      values[':name'] = toWrite.name;
     }
-    if (data.address !== undefined) {
+    if (toWrite.address !== undefined) {
       setParts.push('address = :address');
-      values[':address'] = data.address;
+      values[':address'] = toWrite.address;
     }
-    if (data.latitude !== undefined) {
+    if (toWrite.latitude !== undefined) {
       setParts.push('latitude = :latitude');
-      values[':latitude'] = data.latitude;
+      values[':latitude'] = toWrite.latitude;
     }
-    if (data.longitude !== undefined) {
+    if (toWrite.longitude !== undefined) {
       setParts.push('longitude = :longitude');
-      values[':longitude'] = data.longitude;
+      values[':longitude'] = toWrite.longitude;
     }
 
     const result = await docClient.send(
@@ -94,7 +124,7 @@ export async function updateDevice(
       })
     );
 
-    logger.info('Device updated', { registrationId, updatedBy: claims.sub });
+    logger.info('Device updated', { registrationId, mode, updatedBy: claims.sub });
     return success(toDeviceResponse(result.Attributes ?? {}));
   } catch (error: unknown) {
     if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
