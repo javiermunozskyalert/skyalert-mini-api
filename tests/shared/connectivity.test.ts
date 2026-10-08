@@ -3,7 +3,7 @@ import {
   computeConnectivityStatus,
   ACTIVE_THRESHOLD_SECONDS,
   IDLE_THRESHOLD_SECONDS,
-} from './connectivity';
+} from '../../src/shared/connectivity';
 
 /** now fijo para resultados deterministas. */
 const NOW = new Date('2026-10-08T18:00:00.000Z');

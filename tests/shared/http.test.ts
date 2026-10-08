@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripVersionPrefix } from './http';
+import { stripVersionPrefix } from '../../src/shared/http';
 
 describe('stripVersionPrefix', () => {
   it('removes /v1 prefix', () => {
