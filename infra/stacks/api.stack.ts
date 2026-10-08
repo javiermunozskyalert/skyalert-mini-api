@@ -180,11 +180,45 @@ export class ApiStack extends cdk.Stack {
     // Lectura sobre devices para validar acceso multi-tenant (client/collaborator)
     tables.devices.grantReadData(seismicFn);
 
+    // --- Lambda: History Events ---
+    const historyEventsFn = createLambdaFunction(this, 'HistoryEventsFunction', {
+      config,
+      entry: 'src/functions/history-events/handler.ts',
+      environment: {
+        TABLE_NAME: tables.devices.tableName,
+        ACTIVATIONS_TABLE: 'gps-tracker-activations',
+      },
+    });
+    // Lectura de los devices del tenant.
+    tables.devices.grantReadData(historyEventsFn);
+    // Lectura cross-project de la tabla de activaciones del GPS Tracker.
+    historyEventsFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['dynamodb:Scan', 'dynamodb:GetItem', 'dynamodb:Query'],
+        resources: [
+          `arn:aws:dynamodb:${config.region}:${cdk.Stack.of(this).account}:table/gps-tracker-activations`,
+        ],
+      })
+    );
+
     // --- Routes ---
     this.addRoutes(httpApi, authorizer, '/clients', clientsFn);
     this.addRoutes(httpApi, authorizer, '/devices', devicesFn);
     this.addRoutes(httpApi, authorizer, '/users', usersFn);
     this.addRoutes(httpApi, authorizer, '/seismic', seismicFn);
+
+    // /history_events — ruta única (GET), sin subrutas.
+    const historyIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'history-events-integration',
+      historyEventsFn
+    );
+    httpApi.addRoutes({
+      path: '/history_events',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: historyIntegration,
+      authorizer,
+    });
 
     // --- Outputs ---
     new cdk.CfnOutput(this, 'ApiUrl', {
