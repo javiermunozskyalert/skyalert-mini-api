@@ -23,11 +23,11 @@ export async function lookupDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   _claims: UserClaims
 ): Promise<APIGatewayProxyResultV2> {
-  // path: /devices/lookup/{uuid}
-  const uuid = event.pathParameters?.proxy?.replace(/^lookup\//, '') ?? '';
+  // path: /devices/by-uuid/{uuid}
+  const uuid = event.pathParameters?.proxy?.replace(/^by-uuid\//, '') ?? '';
 
   if (!UUID_PATTERN.test(uuid)) {
-    return badRequest('Invalid uuid format. Expected: ska-XXXXXX (6 alphanumeric chars)');
+    return badRequest('Invalid uuid format. Expected: ska-XXXXXX (6 alphanumeric chars)', 'INVALID_UUID');
   }
 
   try {

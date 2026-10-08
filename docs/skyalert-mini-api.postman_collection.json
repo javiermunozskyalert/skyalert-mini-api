@@ -127,14 +127,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v1/devices/lookup/{{uuid}}",
+              "raw": "{{baseUrl}}/v1/devices/by-uuid/{{uuid}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
                 "devices",
-                "lookup",
+                "by-uuid",
                 "{{uuid}}"
               ]
             },
@@ -315,14 +315,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v1/devices/lookup/{{uuid}}",
+              "raw": "{{baseUrl}}/v1/devices/by-uuid/{{uuid}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
                 "devices",
-                "lookup",
+                "by-uuid",
                 "{{uuid}}"
               ]
             },
@@ -522,7 +522,7 @@
                   "value": "20"
                 },
                 {
-                  "key": "paginationToken",
+                  "key": "lastKey",
                   "value": "",
                   "disabled": true
                 }

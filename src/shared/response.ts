@@ -20,42 +20,47 @@ export function noContent(): APIGatewayProxyResultV2 {
   return { statusCode: 204 };
 }
 
-export function badRequest(message: string): APIGatewayProxyResultV2 {
+/**
+ * Formato de error estándar (Apigee/Google): objeto `error` anidado con
+ * - code: código estable legible por máquina (p. ej. BAD_REQUEST, NOT_FOUND).
+ * - message: mensaje humano.
+ * - status: código HTTP.
+ *
+ * ```json
+ * { "error": { "code": "NOT_FOUND", "message": "Device X not found", "status": 404 } }
+ * ```
+ */
+function errorResponse(
+  statusCode: number,
+  defaultCode: string,
+  message: string,
+  code?: string
+): APIGatewayProxyResultV2 {
   return {
-    statusCode: 400,
+    statusCode,
     headers: defaultHeaders,
-    body: JSON.stringify({ error: 'Bad Request', message }),
+    body: JSON.stringify({
+      error: { code: code ?? defaultCode, message, status: statusCode },
+    }),
   };
 }
 
-export function unauthorized(message = 'Unauthorized'): APIGatewayProxyResultV2 {
-  return {
-    statusCode: 401,
-    headers: defaultHeaders,
-    body: JSON.stringify({ error: 'Unauthorized', message }),
-  };
+export function badRequest(message: string, code?: string): APIGatewayProxyResultV2 {
+  return errorResponse(400, 'BAD_REQUEST', message, code);
 }
 
-export function forbidden(message = 'Forbidden'): APIGatewayProxyResultV2 {
-  return {
-    statusCode: 403,
-    headers: defaultHeaders,
-    body: JSON.stringify({ error: 'Forbidden', message }),
-  };
+export function unauthorized(message = 'Unauthorized', code?: string): APIGatewayProxyResultV2 {
+  return errorResponse(401, 'UNAUTHORIZED', message, code);
 }
 
-export function notFound(message = 'Resource not found'): APIGatewayProxyResultV2 {
-  return {
-    statusCode: 404,
-    headers: defaultHeaders,
-    body: JSON.stringify({ error: 'Not Found', message }),
-  };
+export function forbidden(message = 'Forbidden', code?: string): APIGatewayProxyResultV2 {
+  return errorResponse(403, 'FORBIDDEN', message, code);
 }
 
-export function serverError(message = 'Internal server error'): APIGatewayProxyResultV2 {
-  return {
-    statusCode: 500,
-    headers: defaultHeaders,
-    body: JSON.stringify({ error: 'Internal Server Error', message }),
-  };
+export function notFound(message = 'Resource not found', code?: string): APIGatewayProxyResultV2 {
+  return errorResponse(404, 'NOT_FOUND', message, code);
+}
+
+export function serverError(message = 'Internal server error', code?: string): APIGatewayProxyResultV2 {
+  return errorResponse(500, 'INTERNAL_ERROR', message, code);
 }

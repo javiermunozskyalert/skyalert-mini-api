@@ -54,7 +54,9 @@ Headers: `Content-Type`, `Authorization`. Métodos: `GET, POST, PUT, DELETE, OPT
 | 404 | Recurso no encontrado |
 | 500 | Error interno |
 
-Los errores tienen forma `{ "error": "...", "message": "..." }`.
+Los errores tienen forma `{ "error": { "code": "NOT_FOUND", "message": "...", "status": 404 } }`.
+El `code` es un identificador estable legible por máquina (ej. `BAD_REQUEST`, `NOT_FOUND`,
+`FORBIDDEN`, `UNAUTHORIZED`, `INTERNAL_ERROR`, o específicos como `INVALID_UUID`).
 
 ---
 
@@ -112,7 +114,7 @@ Registro de dispositivos vinculados a un cliente. Referencia cruzada con la tabl
 > `Authorization: JWT <token>`. Para legacy, el rol es siempre `client` y el tenant
 > es `legacy#<customerId>` (derivado del `sub` del JWT).
 
-### GET `/v1/devices/lookup/{uuid}` — Verificar device físico
+### GET `/v1/devices/by-uuid/{uuid}` — Verificar device físico
 Rol: cualquier rol autenticado. `uuid` debe cumplir el patrón `ska-XXXXXX` (6 alfanuméricos).
 
 Resuelve el device en `gps-tracker-devices` (indexado como `device_id = "uuid#<uuid>"`,
@@ -253,11 +255,11 @@ Rol: admin/internal. Body:
 Respuesta `201`: `{ "username", "email", "name", "role", "clientId", "status" }`.
 
 ### GET `/v1/users` — Listar usuarios
-Rol: admin/internal. Query params: `limit` (def. 20, máx. 60), `paginationToken`.
+Rol: admin/internal. Query params: `limit` (def. 20, máx. 60), `lastKey`.
 
 Respuesta `200`:
 ```json
-{ "items": [ /* usuarios */ ], "paginationToken": "token-o-null" }
+{ "items": [ /* usuarios */ ], "lastKey": "token-o-null" }
 ```
 
 ### GET `/v1/users/{username}` — Detalle

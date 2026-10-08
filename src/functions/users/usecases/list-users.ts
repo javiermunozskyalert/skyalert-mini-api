@@ -55,14 +55,16 @@ export async function listUsers(
   }
 
   const limit = parseInt(event.queryStringParameters?.limit ?? '20', 10);
-  const paginationToken = event.queryStringParameters?.paginationToken;
+  // Nombre de cursor unificado con el resto de la API: lastKey.
+  // Internamente mapea al PaginationToken de Cognito.
+  const lastKey = event.queryStringParameters?.lastKey;
 
   try {
     const result = await cognitoClient.send(
       new ListUsersCommand({
         UserPoolId: USER_POOL_ID,
         Limit: Math.min(limit, 60),
-        PaginationToken: paginationToken,
+        PaginationToken: lastKey,
       })
     );
 
@@ -70,7 +72,7 @@ export async function listUsers(
 
     return success({
       items,
-      paginationToken: result.PaginationToken ?? null,
+      lastKey: result.PaginationToken ?? null,
     });
   } catch (error: unknown) {
     logger.error('Failed to list users', {

@@ -25,8 +25,8 @@ export async function handler(
   logger.info('Request received', { method, path, userId: claims.sub });
 
   try {
-    // GET /devices/lookup/{uuid} — valida existencia por uuid en gps-tracker-devices
-    if (method === 'GET' && path.includes('/devices/lookup/')) {
+    // GET /devices/by-uuid/{uuid} — valida existencia por uuid en gps-tracker-devices
+    if (method === 'GET' && path.includes('/devices/by-uuid/')) {
       return await lookupDevice(event, claims);
     }
 
