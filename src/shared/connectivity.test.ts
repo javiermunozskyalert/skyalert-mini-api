@@ -74,6 +74,25 @@ describe('computeConnectivityStatus', () => {
     expect(result.connectivity_status).toBe('disconnected');
     // Mantiene el seconds_ago aunque esté offline.
     expect(result.last_seen_seconds_ago).toBe(10);
+    // connection_status crudo se expone tal cual.
+    expect(result.connection_status).toBe('offline');
+  });
+
+  it('should expose connection_status online alongside the derived status', () => {
+    const result = computeConnectivityStatus(
+      { last_seen_at: secondsBefore(30), connection_status: 'online' },
+      NOW
+    );
+    expect(result.connectivity_status).toBe('active');
+    expect(result.connection_status).toBe('online');
+  });
+
+  it('should expose connection_status as null when absent', () => {
+    const result = computeConnectivityStatus(
+      { last_seen_at: secondsBefore(30) },
+      NOW
+    );
+    expect(result.connection_status).toBeNull();
   });
 
   it('should return disconnected when last_seen_at is absent', () => {

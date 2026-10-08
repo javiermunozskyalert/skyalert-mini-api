@@ -37,6 +37,8 @@ export interface ConnectivityResult {
   connectivity_status: ConnectivityStatus;
   /** Segundos desde la última posición; null si no hay last_seen_at válido. */
   last_seen_seconds_ago: number | null;
+  /** Estado crudo del socket TCP (del EC2): "online" | "offline" | null. */
+  connection_status: string | null;
 }
 
 /**
@@ -60,18 +62,19 @@ export function computeConnectivityStatus(
   item: ConnectivityInput,
   now: Date = new Date()
 ): ConnectivityResult {
+  const connection_status = item.connection_status ?? null;
   const lastSeenMs = parseIsoUtcMs(item.last_seen_at);
 
   // Sin last_seen_at válido → desconectado (no podemos calcular antigüedad).
   if (lastSeenMs === null) {
-    return { connectivity_status: 'disconnected', last_seen_seconds_ago: null };
+    return { connectivity_status: 'disconnected', last_seen_seconds_ago: null, connection_status };
   }
 
   const secondsAgo = Math.round((now.getTime() - lastSeenMs) / 1000);
 
   // Socket cerrado → desconectado, independientemente de la antigüedad.
   if (item.connection_status === 'offline') {
-    return { connectivity_status: 'disconnected', last_seen_seconds_ago: secondsAgo };
+    return { connectivity_status: 'disconnected', last_seen_seconds_ago: secondsAgo, connection_status };
   }
 
   let status: ConnectivityStatus;
@@ -83,5 +86,5 @@ export function computeConnectivityStatus(
     status = 'stale';
   }
 
-  return { connectivity_status: status, last_seen_seconds_ago: secondsAgo };
+  return { connectivity_status: status, last_seen_seconds_ago: secondsAgo, connection_status };
 }

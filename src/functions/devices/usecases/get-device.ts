@@ -37,18 +37,19 @@ async function withConnectivity(
   connectivity_status: string;
   last_seen_seconds_ago: number | null;
   last_seen_at: string | null;
+  connection_status: string | null;
 }> {
   const gpsDeviceId = base.gpsDeviceId;
   const fields =
     typeof gpsDeviceId === 'string' ? await getGpsConnectivityFields(gpsDeviceId) : null;
-  const { connectivity_status, last_seen_seconds_ago } = computeConnectivityStatus(
-    fields ?? {}
-  );
+  const { connectivity_status, last_seen_seconds_ago, connection_status } =
+    computeConnectivityStatus(fields ?? {});
   return {
     ...base,
     connectivity_status,
     last_seen_seconds_ago,
     last_seen_at: fields?.last_seen_at ?? null,
+    connection_status,
   };
 }
 

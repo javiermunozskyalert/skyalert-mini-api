@@ -21,14 +21,14 @@ async function enrichWithConnectivity(
   const gpsDeviceId = item.gpsDeviceId;
   const fields =
     typeof gpsDeviceId === 'string' ? await getGpsConnectivityFields(gpsDeviceId) : null;
-  const { connectivity_status, last_seen_seconds_ago } = computeConnectivityStatus(
-    fields ?? {}
-  );
+  const { connectivity_status, last_seen_seconds_ago, connection_status } =
+    computeConnectivityStatus(fields ?? {});
   return {
     ...item,
     connectivity_status,
     last_seen_seconds_ago,
     last_seen_at: fields?.last_seen_at ?? null,
+    connection_status,
   };
 }
 
