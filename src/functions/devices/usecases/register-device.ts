@@ -3,7 +3,8 @@ import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
 import { created, badRequest, forbidden, notFound, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
-import { findGpsDeviceByUuid, updateDeviceStatus } from '../../../shared/gps-devices';
+import { findGpsDeviceByUuid, updateDeviceStatus, gpsCacheKey } from '../../../shared/gps-devices';
+import { invalidate } from '../../../shared/cache';
 import { logger } from '../../../shared/logger';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
@@ -118,6 +119,9 @@ export async function registerDevice(
 
     // 3. Cambiar el status administrativo del device a "active" (status_device)
     await updateDeviceStatus(gpsDeviceId, 'active');
+
+    // Invalidar el caché del lookup (el status_device cambió).
+    await invalidate(gpsCacheKey(uuid));
 
     logger.info('Device registered and status_device set to active', {
       registrationId,

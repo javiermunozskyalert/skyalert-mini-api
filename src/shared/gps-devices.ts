@@ -15,6 +15,11 @@ const GPS_DEVICES_TABLE = process.env.GPS_DEVICES_TABLE ?? 'gps-tracker-devices'
 /** Prefijo con el que la tabla GPS indexa un device por su uuid. */
 const UUID_KEY_PREFIX = 'uuid#';
 
+/** Clave de caché para el lookup de un device GPS por uuid. */
+export function gpsCacheKey(uuid: string): string {
+  return `gps:lookup:${uuid}`;
+}
+
 /** Estado administrativo del device (campo status_device). */
 export type DeviceStatus = 'active' | 'inactive' | 'revoke' | 'maintenance';
 
@@ -98,4 +103,18 @@ export async function updateDeviceStatus(
       ConditionExpression: 'attribute_exists(device_id)',
     })
   );
+}
+
+/**
+ * Resuelve el uuid (device_uuid) de un device físico por su device_id.
+ * Se usa para invalidar el caché del lookup tras cambiar su status.
+ */
+export async function findGpsDeviceUuidById(deviceId: string): Promise<string | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: GPS_DEVICES_TABLE,
+      Key: { device_id: deviceId },
+    })
+  );
+  return (result.Item?.device_uuid as string | undefined) ?? null;
 }

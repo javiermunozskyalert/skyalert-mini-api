@@ -107,11 +107,23 @@ export class ApiStack extends cdk.Stack {
         TABLE_NAME: tables.devices.tableName,
         GPS_DEVICES_TABLE: 'gps-tracker-devices',
         CLIENTS_TABLE: tables.clients.tableName,
+        REDIS_URL_PARAM: `/skyalert-mini-api/${config.envName}/redis.url`,
       },
     });
     tables.devices.grantReadWriteData(devicesFn);
     // Auto-provisioning de customers legacy: escribir el registro CLIENT.
     tables.clients.grantReadWriteData(devicesFn);
+
+    // Lectura del parámetro con la URL de Redis (cache).
+    devicesFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['ssm:GetParameter'],
+        resources: [
+          `arn:aws:ssm:${config.region}:${cdk.Stack.of(this).account}:parameter/skyalert-mini-api/${config.envName}/redis.url`,
+        ],
+      })
+    );
 
     // Acceso cross-project a la tabla del GPS Tracker (gps-tracker-devices).
     // Necesario para validar el device por uuid y cambiar su status al registrarlo.

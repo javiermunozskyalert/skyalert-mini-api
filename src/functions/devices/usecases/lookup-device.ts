@@ -1,10 +1,13 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { UserClaims } from '../../../shared/auth';
 import { success, badRequest, notFound, serverError } from '../../../shared/response';
-import { findGpsDeviceByUuid } from '../../../shared/gps-devices';
+import { findGpsDeviceByUuid, gpsCacheKey, type GpsDevice } from '../../../shared/gps-devices';
+import { getOrSet } from '../../../shared/cache';
 import { logger } from '../../../shared/logger';
 
 const UUID_PATTERN = /^ska-[A-Za-z0-9]{6}$/;
+/** TTL corto: el status_device cambia al registrar; se invalida en register/delete. */
+const LOOKUP_TTL_SECONDS = 30;
 
 /**
  * Busca un device en gps-tracker-devices por su uuid-device y valida que exista.
@@ -12,6 +15,9 @@ const UUID_PATTERN = /^ska-[A-Za-z0-9]{6}$/;
  * Se usa antes de registrar el device en skyalert (para confirmar que el
  * dispositivo físico existe y está reportando en el GPS tracker).
  * Accesible por cualquier rol autenticado.
+ *
+ * Cachea el device del GPS (cache-aside, TTL corto). La respuesta/canRegister
+ * se calcula fuera del caché a partir del dato cacheado.
  */
 export async function lookupDevice(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -25,7 +31,11 @@ export async function lookupDevice(
   }
 
   try {
-    const gpsDevice = await findGpsDeviceByUuid(uuid);
+    const gpsDevice = await getOrSet<GpsDevice | null>(
+      gpsCacheKey(uuid),
+      LOOKUP_TTL_SECONDS,
+      () => findGpsDeviceByUuid(uuid)
+    );
 
     if (!gpsDevice) {
       return notFound(`No device found with uuid ${uuid}`);

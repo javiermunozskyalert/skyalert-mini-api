@@ -3,7 +3,8 @@ import { UpdateCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
 import { success, notFound, serverError } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
-import { updateDeviceStatus } from '../../../shared/gps-devices';
+import { updateDeviceStatus, gpsCacheKey, findGpsDeviceUuidById } from '../../../shared/gps-devices';
+import { invalidate } from '../../../shared/cache';
 import { logger } from '../../../shared/logger';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
@@ -52,6 +53,12 @@ export async function deleteDevice(
 
     // 1. Cambiar status_device a "inactive" en gps-tracker-devices
     await updateDeviceStatus(gpsDeviceId, 'inactive');
+
+    // Invalidar el caché del lookup (el status_device cambió a inactive).
+    const uuid = await findGpsDeviceUuidById(gpsDeviceId);
+    if (uuid) {
+      await invalidate(gpsCacheKey(uuid));
+    }
 
     // 2. Marcar el registro de skyalert como inactivo (soft delete, auditoría)
     await docClient.send(
