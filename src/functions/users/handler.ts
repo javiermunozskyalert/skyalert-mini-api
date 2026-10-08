@@ -2,6 +2,7 @@ import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from
 import { logger } from '../../shared/logger';
 import { badRequest, serverError } from '../../shared/response';
 import { extractClaims } from '../../shared/auth';
+import { stripVersionPrefix } from '../../shared/http';
 import { createUser } from './usecases/create-user';
 import { listUsers } from './usecases/list-users';
 import { getUser } from './usecases/get-user';
@@ -18,7 +19,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   const method = event.requestContext.http.method;
-  const path = event.rawPath;
+  const path = stripVersionPrefix(event.rawPath);
   const claims = extractClaims(event);
 
   logger.info('Request received', { method, path, userId: claims.sub });

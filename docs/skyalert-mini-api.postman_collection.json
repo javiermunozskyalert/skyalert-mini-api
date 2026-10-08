@@ -97,11 +97,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/devices",
+              "raw": "{{baseUrl}}/v1/devices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices"
               ]
             },
@@ -126,11 +127,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/devices/lookup/{{uuid}}",
+              "raw": "{{baseUrl}}/v1/devices/lookup/{{uuid}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices",
                 "lookup",
                 "{{uuid}}"
@@ -164,11 +166,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/devices",
+              "raw": "{{baseUrl}}/v1/devices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices"
               ]
             },
@@ -195,11 +198,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/clients",
+              "raw": "{{baseUrl}}/v1/clients",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "clients"
               ]
             },
@@ -215,11 +219,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/clients?limit=20",
+              "raw": "{{baseUrl}}/v1/clients?limit=20",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "clients"
               ],
               "query": [
@@ -242,11 +247,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "raw": "{{baseUrl}}/v1/clients/{{clientId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "clients",
                 "{{clientId}}"
               ]
@@ -264,11 +270,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "raw": "{{baseUrl}}/v1/clients/{{clientId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "clients",
                 "{{clientId}}"
               ]
@@ -285,11 +292,12 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/clients/{{clientId}}",
+              "raw": "{{baseUrl}}/v1/clients/{{clientId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "clients",
                 "{{clientId}}"
               ]
@@ -307,11 +315,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/devices/lookup/{{uuid}}",
+              "raw": "{{baseUrl}}/v1/devices/lookup/{{uuid}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices",
                 "lookup",
                 "{{uuid}}"
@@ -348,11 +357,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/devices",
+              "raw": "{{baseUrl}}/v1/devices",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices"
               ]
             },
@@ -369,11 +379,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/devices?limit=20",
+              "raw": "{{baseUrl}}/v1/devices?limit=20",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices"
               ],
               "query": [
@@ -402,11 +413,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/devices/{{registrationId}}",
+              "raw": "{{baseUrl}}/v1/devices/{{registrationId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices",
                 "{{registrationId}}"
               ]
@@ -424,11 +436,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/devices/{{registrationId}}",
+              "raw": "{{baseUrl}}/v1/devices/{{registrationId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices",
                 "{{registrationId}}"
               ]
@@ -446,11 +459,12 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/devices/{{registrationId}}",
+              "raw": "{{baseUrl}}/v1/devices/{{registrationId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "devices",
                 "{{registrationId}}"
               ]
@@ -473,11 +487,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/users",
+              "raw": "{{baseUrl}}/v1/users",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "users"
               ]
             },
@@ -493,11 +508,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/users?limit=20",
+              "raw": "{{baseUrl}}/v1/users?limit=20",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "users"
               ],
               "query": [
@@ -520,11 +536,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/users/{{username}}",
+              "raw": "{{baseUrl}}/v1/users/{{username}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "users",
                 "{{username}}"
               ]
@@ -542,11 +559,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/users/{{username}}/role",
+              "raw": "{{baseUrl}}/v1/users/{{username}}/role",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "users",
                 "{{username}}",
                 "role"
@@ -569,11 +587,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/users/{{username}}/status",
+              "raw": "{{baseUrl}}/v1/users/{{username}}/status",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "users",
                 "{{username}}",
                 "status"
@@ -591,11 +610,12 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/users/{{username}}",
+              "raw": "{{baseUrl}}/v1/users/{{username}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "users",
                 "{{username}}"
               ]
@@ -613,11 +633,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/seismic/{{deviceId}}/latest",
+              "raw": "{{baseUrl}}/v1/seismic/{{deviceId}}/latest",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "seismic",
                 "{{deviceId}}",
                 "latest"
@@ -631,11 +652,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/seismic/{{deviceId}}?limit=50",
+              "raw": "{{baseUrl}}/v1/seismic/{{deviceId}}?limit=50",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "seismic",
                 "{{deviceId}}"
               ],
@@ -675,12 +697,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/history_events",
+              "raw": "{{baseUrl}}/v1/history-events",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "history_events"
+                "v1",
+                "history-events"
               ]
             },
             "description": "GET /history_events. items: [{ notificationId, timestamp, impactAt, intensity, command, source, latency_ms, devices:[{gpsDeviceId, registrationId, name}] }]. Filtra por los devices del customer del token. Requiere Authorization: JWT <token> (legacy)."

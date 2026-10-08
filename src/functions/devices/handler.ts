@@ -2,6 +2,7 @@ import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from
 import { logger } from '../../shared/logger';
 import { badRequest, serverError } from '../../shared/response';
 import { extractClaims } from '../../shared/auth';
+import { stripVersionPrefix } from '../../shared/http';
 import { lookupDevice } from './usecases/lookup-device';
 import { registerDevice } from './usecases/register-device';
 import { listDevices } from './usecases/list-devices';
@@ -18,7 +19,7 @@ export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer
 ): Promise<APIGatewayProxyResultV2> {
   const method = event.requestContext.http.method;
-  const path = event.rawPath;
+  const path = stripVersionPrefix(event.rawPath);
   const claims = extractClaims(event);
 
   logger.info('Request received', { method, path, userId: claims.sub });
@@ -44,8 +45,8 @@ export async function handler(
       return await getDevice(event, claims);
     }
 
-    // PUT /devices/{registrationId} — actualiza name
-    if (method === 'PUT' && path.startsWith('/devices/')) {
+    // PUT|PATCH /devices/{registrationId} — actualiza (parcial). Ambos aceptados.
+    if ((method === 'PUT' || method === 'PATCH') && path.startsWith('/devices/')) {
       return await updateDevice(event, claims);
     }
 

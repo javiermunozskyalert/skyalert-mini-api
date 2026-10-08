@@ -202,19 +202,20 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
-    // --- Routes ---
-    this.addRoutes(httpApi, authorizer, '/clients', clientsFn);
-    this.addRoutes(httpApi, authorizer, '/devices', devicesFn);
-    this.addRoutes(httpApi, authorizer, '/users', usersFn);
-    this.addRoutes(httpApi, authorizer, '/seismic', seismicFn);
+    // --- Routes (versioned under /v1) ---
+    const V1 = '/v1';
+    this.addRoutes(httpApi, authorizer, `${V1}/clients`, clientsFn);
+    this.addRoutes(httpApi, authorizer, `${V1}/devices`, devicesFn);
+    this.addRoutes(httpApi, authorizer, `${V1}/users`, usersFn);
+    this.addRoutes(httpApi, authorizer, `${V1}/seismic`, seismicFn);
 
-    // /history_events — ruta única (GET), sin subrutas.
+    // /v1/history-events — ruta única (GET), sin subrutas (kebab-case).
     const historyIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
       'history-events-integration',
       historyEventsFn
     );
     httpApi.addRoutes({
-      path: '/history_events',
+      path: `${V1}/history-events`,
       methods: [apigatewayv2.HttpMethod.GET],
       integration: historyIntegration,
       authorizer,
@@ -253,6 +254,7 @@ export class ApiStack extends cdk.Stack {
       methods: [
         apigatewayv2.HttpMethod.GET,
         apigatewayv2.HttpMethod.PUT,
+        apigatewayv2.HttpMethod.PATCH,
         apigatewayv2.HttpMethod.DELETE,
       ],
       integration,
