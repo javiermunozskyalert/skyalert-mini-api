@@ -8,13 +8,40 @@ import { z } from 'zod';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
-const UpdateDeviceSchema = z.object({
-  name: z.string().min(1).max(200),
-});
+const UpdateDeviceSchema = z
+  .object({
+    name: z.string().min(1).max(200).optional(),
+    address: z.string().max(500).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+  })
+  .refine(
+    (data) => Object.values(data).some((v) => v !== undefined),
+    { message: 'At least one field (name, address, latitude, longitude) is required' }
+  );
+
+/** Expone solo los campos de negocio del device (omite PK/SK internos). */
+function toDeviceResponse(item: Record<string, unknown>) {
+  return {
+    registrationId: item.registrationId ?? null,
+    clientId: item.clientId ?? null,
+    name: item.name ?? null,
+    address: item.address ?? null,
+    latitude: item.latitude ?? null,
+    longitude: item.longitude ?? null,
+    gpsDeviceId: item.gpsDeviceId ?? null,
+    statusDevice: item.status_device ?? null,
+    createdAt: item.createdAt ?? null,
+    updatedAt: item.updatedAt ?? null,
+    createdBy: item.createdBy ?? null,
+  };
+}
 
 /**
- * Actualiza los datos editables de un device (name).
+ * Actualiza los datos editables de un device: name, address, latitude, longitude.
  * PUT /devices/{registrationId}
+ *
+ * Actualización parcial: solo se modifican los campos presentes en el body.
  *
  * Visibilidad por rol (misma lógica que list/get):
  *  - admin/internal → pueden actualizar cualquier device (búsqueda global).
@@ -41,6 +68,33 @@ export async function updateDevice(
       return notFound(`Device ${registrationId} not found`);
     }
 
+    // Construir la expresión de actualización dinámicamente (solo campos presentes).
+    const data = validation.data;
+    const setParts: string[] = ['updatedAt = :now'];
+    const names: Record<string, string> = {};
+    const values: Record<string, unknown> = {
+      ':now': new Date().toISOString(),
+      ':inactive': 'inactive',
+    };
+
+    if (data.name !== undefined) {
+      setParts.push('#name = :name');
+      names['#name'] = 'name';
+      values[':name'] = data.name;
+    }
+    if (data.address !== undefined) {
+      setParts.push('address = :address');
+      values[':address'] = data.address;
+    }
+    if (data.latitude !== undefined) {
+      setParts.push('latitude = :latitude');
+      values[':latitude'] = data.latitude;
+    }
+    if (data.longitude !== undefined) {
+      setParts.push('longitude = :longitude');
+      values[':longitude'] = data.longitude;
+    }
+
     const result = await docClient.send(
       new UpdateCommand({
         TableName: TABLE_NAME,
@@ -48,20 +102,16 @@ export async function updateDevice(
           PK: `DEVICE#${clientId}`,
           SK: `DEVICE#${registrationId}`,
         },
-        UpdateExpression: 'SET #name = :name, updatedAt = :now',
-        ExpressionAttributeNames: { '#name': 'name' },
-        ExpressionAttributeValues: {
-          ':name': validation.data.name,
-          ':now': new Date().toISOString(),
-          ':inactive': 'inactive',
-        },
+        UpdateExpression: `SET ${setParts.join(', ')}`,
+        ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
+        ExpressionAttributeValues: values,
         ConditionExpression: 'attribute_exists(SK) AND status_device <> :inactive',
         ReturnValues: 'ALL_NEW',
       })
     );
 
     logger.info('Device updated', { registrationId, updatedBy: claims.sub });
-    return success(result.Attributes);
+    return success(toDeviceResponse(result.Attributes ?? {}));
   } catch (error: unknown) {
     if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
       return notFound(`Device ${registrationId} not found`);
