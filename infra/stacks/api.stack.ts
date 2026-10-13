@@ -203,6 +203,15 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
+    // --- Lambda: Me (identidad ligera) ---
+    // No accede a ninguna tabla: solo devuelve los claims que el authorizer
+    // ya resolvió. Lo usa el dashboard para validar un token v3 (deep-link SSO)
+    // sin necesidad del secreto HS256 compartido.
+    const meFn = createLambdaFunction(this, 'MeFunction', {
+      config,
+      entry: 'src/functions/me/handler.ts',
+    });
+
     // --- Routes (versioned under /v1) ---
     const V1 = '/v1';
     this.addRoutes(httpApi, authorizer, `${V1}/clients`, clientsFn);
@@ -219,6 +228,18 @@ export class ApiStack extends cdk.Stack {
       path: `${V1}/history-events`,
       methods: [apigatewayv2.HttpMethod.GET],
       integration: historyIntegration,
+      authorizer,
+    });
+
+    // /v1/me — identidad del portador del token (GET único, bajo el authorizer).
+    const meIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'me-integration',
+      meFn
+    );
+    httpApi.addRoutes({
+      path: `${V1}/me`,
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: meIntegration,
       authorizer,
     });
 

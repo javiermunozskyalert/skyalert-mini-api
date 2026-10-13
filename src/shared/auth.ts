@@ -86,6 +86,22 @@ function parseGroups(raw: unknown): Role[] {
   return [];
 }
 
+/**
+ * Origen del token tal como lo resolvió el authorizer: "cognito" (web) o
+ * "legacy" (app v3). Útil para que el consumidor confirme que un usuario es
+ * Customer de la app (source === "legacy") sin inspeccionar el token.
+ *
+ * El JWT Authorizer nativo (compatibilidad) no distingue origen: se asume
+ * "cognito".
+ */
+export function extractSource(event: AuthEvent): AuthorizerContext['source'] {
+  const authorizer = event.requestContext.authorizer;
+  if ('lambda' in authorizer && authorizer.lambda) {
+    return (authorizer.lambda as AuthorizerContext).source;
+  }
+  return 'cognito';
+}
+
 export function hasRole(claims: UserClaims, role: Role): boolean {
   return claims.groups.includes(role);
 }

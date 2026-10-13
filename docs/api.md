@@ -346,6 +346,46 @@ Si el tenant no tiene devices → `{ "items": [] }`.
 
 ---
 
+## 6. Me — `/v1/me`
+
+Identidad ligera del portador del token. Devuelve los claims que el **DualAuthorizer**
+ya resolvió, sin tocar la base de datos. Pensado para **introspección de identidad**
+(no mezcla autorización de recursos de negocio con verificación de identidad).
+
+Caso de uso principal: el **dashboard web** valida un token v3 del Customer
+(deep-link SSO) server-side sin necesitar el secreto HS256 compartido.
+
+### GET `/v1/me` — Identidad del token
+Rol: cualquier usuario autenticado (web Cognito o app legacy).
+
+Respuesta `200`:
+```json
+{
+  "sub": "507f1f77bcf86cd799439011",
+  "email": null,
+  "role": "client",
+  "roles": ["client"],
+  "clientId": "legacy#507f1f77bcf86cd799439011",
+  "source": "legacy",
+  "isAdmin": false
+}
+```
+
+| Campo | Descripción |
+|---|---|
+| `sub` | Identificador del usuario (del token). Para legacy, el `customerId`. |
+| `email` | Email del usuario, o `null` (los tokens legacy no lo traen). |
+| `role` | Rol efectivo (primer grupo). Para legacy siempre `client`. |
+| `roles` | Todos los grupos/roles del usuario. |
+| `clientId` | Tenant del usuario, o `null`. Para legacy: `legacy#<sub>`. |
+| `source` | Origen del token: `cognito` (web) o `legacy` (app v3). |
+| `isAdmin` | `true` si el usuario es `admin` o `internal`. |
+
+- `401` lo responde API Gateway (token ausente o inválido); nunca llega al Lambda.
+- Para el flujo deep-link SSO: `200` = token válido (abrir sesión); `401` = redirigir a login.
+
+---
+
 ## Notas
 
 - El enrutamiento fino lo resuelve cada handler leyendo `method` + `rawPath`. En API Gateway cada dominio registra `GET,POST` en la ruta base y `GET,PUT,DELETE` en `{base}/{proxy+}`.
