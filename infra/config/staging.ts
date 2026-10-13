@@ -6,6 +6,8 @@ export const stagingConfig: EnvironmentConfig = {
   region: 'us-east-1',
   prefix: 'skyalert-stg',
 
+  legacyApiUrl: 'https://clients-api.develop.skyalert.mx',
+
   tags: {
     Environment: 'staging',
     Project: 'skyalert-lite',

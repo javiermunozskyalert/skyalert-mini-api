@@ -13,6 +13,9 @@ export interface EnvironmentConfig {
   /** Prefijo para nombres de recursos — identifica ambiente en consola AWS */
   prefix: string;
 
+  /** URL base del backend legacy (legacy-clients) para enriquecer el provisioning. */
+  legacyApiUrl: string;
+
   /** Tags obligatorios para todos los recursos */
   tags: {
     Environment: string;

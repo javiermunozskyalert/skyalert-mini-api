@@ -1,11 +1,15 @@
 import { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { UserClaims, isAdmin } from '../../../shared/auth';
-import { success, forbidden, serverError } from '../../../shared/response';
+import { success, forbidden, serverError, badGateway } from '../../../shared/response';
 import { docClient } from '../../../shared/dynamo';
 import { toDeviceWithConnectivity, DeviceWithConnectivity } from '../../../shared/device-response';
 import { logger } from '../../../shared/logger';
-import { ensureLegacyCustomerProvisioned } from '../../../shared/provisioning';
+import {
+  ensureLegacyCustomerProvisioned,
+  LegacyCustomerUnavailableError,
+} from '../../../shared/provisioning';
+import { extractAuthToken } from '../../../shared/http';
 
 const TABLE_NAME = process.env.TABLE_NAME!;
 
@@ -38,8 +42,10 @@ export async function listDevices(
 
   try {
     // Auto-provisioning idempotente del customer legacy (no-op si ya existe
-    // o si no es un usuario legacy).
-    await ensureLegacyCustomerProvisioned(claims);
+    // o si no es un usuario legacy). Se pasa el token crudo para que, en el
+    // alta, pueda consultar name/email al backend legacy.
+    const rawToken = extractAuthToken(event.headers as Record<string, string | undefined>);
+    await ensureLegacyCustomerProvisioned(claims, rawToken);
 
     // Determinar el scope según el rol
     if (isAdmin(claims)) {
@@ -56,6 +62,15 @@ export async function listDevices(
     }
     return await listByClient(claims.clientId, limit, lastKey);
   } catch (error: unknown) {
+    // En producción, si el customer legacy no se puede resolver (not-found o
+    // fallo de comunicación con el legacy), el provisioning bloquea el acceso.
+    if (error instanceof LegacyCustomerUnavailableError) {
+      logger.warn('Legacy customer provisioning blocked', {
+        customerId: error.customerId,
+        reason: error.reason,
+      });
+      return badGateway(error.message, error.code);
+    }
     logger.error('Failed to list devices', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });

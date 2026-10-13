@@ -8,6 +8,7 @@ import {
   success,
   created,
   noContent,
+  badGateway,
 } from '../../src/shared/response';
 
 function parse(res: { statusCode: number; body?: string }) {
@@ -47,6 +48,13 @@ describe('response error format (Apigee style)', () => {
     const { status, body } = parse(serverError() as never);
     expect(status).toBe(500);
     expect(body.error.code).toBe('INTERNAL_ERROR');
+  });
+
+  it('badGateway -> BAD_GATEWAY / 502 with custom code', () => {
+    const { status, body } = parse(badGateway('legacy down', 'LEGACY_CUSTOMER_UNAVAILABLE') as never);
+    expect(status).toBe(502);
+    expect(body.error.code).toBe('LEGACY_CUSTOMER_UNAVAILABLE');
+    expect(body.error.message).toBe('legacy down');
   });
 });
 

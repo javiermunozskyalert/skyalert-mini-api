@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripVersionPrefix } from '../../src/shared/http';
+import { stripVersionPrefix, extractAuthToken } from '../../src/shared/http';
 
 describe('stripVersionPrefix', () => {
   it('removes /v1 prefix', () => {
@@ -19,5 +19,24 @@ describe('stripVersionPrefix', () => {
   });
   it('does not strip a non-version segment that starts with v', () => {
     expect(stripVersionPrefix('/version/devices')).toBe('/version/devices');
+  });
+});
+
+describe('extractAuthToken', () => {
+  it('extracts the token from a "JWT <token>" header (legacy app)', () => {
+    expect(extractAuthToken({ authorization: 'JWT abc.def.ghi' })).toBe('abc.def.ghi');
+  });
+  it('extracts the token from a "Bearer <token>" header (web Cognito)', () => {
+    expect(extractAuthToken({ authorization: 'Bearer xyz.123' })).toBe('xyz.123');
+  });
+  it('supports the capitalized Authorization key', () => {
+    expect(extractAuthToken({ Authorization: 'JWT tok' })).toBe('tok');
+  });
+  it('returns undefined when there is no header', () => {
+    expect(extractAuthToken(undefined)).toBeUndefined();
+    expect(extractAuthToken({})).toBeUndefined();
+  });
+  it('returns undefined when the header has no token part', () => {
+    expect(extractAuthToken({ authorization: 'JWT' })).toBeUndefined();
   });
 });

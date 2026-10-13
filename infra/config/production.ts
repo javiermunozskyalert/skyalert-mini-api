@@ -6,6 +6,9 @@ export const productionConfig: EnvironmentConfig = {
   region: process.env.CDK_DEFAULT_REGION ?? 'us-east-1',
   prefix: 'skyalert-prod',
 
+  // Confirmar el dominio real del backend legacy en producción.
+  legacyApiUrl: 'https://clients-api.skyalert.mx',
+
   tags: {
     Environment: 'production',
     Project: 'skyalert-lite',

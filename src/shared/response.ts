@@ -64,3 +64,7 @@ export function notFound(message = 'Resource not found', code?: string): APIGate
 export function serverError(message = 'Internal server error', code?: string): APIGatewayProxyResultV2 {
   return errorResponse(500, 'INTERNAL_ERROR', message, code);
 }
+
+export function badGateway(message = 'Upstream dependency error', code?: string): APIGatewayProxyResultV2 {
+  return errorResponse(502, 'BAD_GATEWAY', message, code);
+}

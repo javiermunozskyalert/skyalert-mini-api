@@ -108,6 +108,7 @@ export class ApiStack extends cdk.Stack {
         GPS_DEVICES_TABLE: 'gps-tracker-devices',
         CLIENTS_TABLE: tables.clients.tableName,
         REDIS_URL_PARAM: `/skyalert-mini-api/${config.envName}/redis.url`,
+        LEGACY_API_URL: config.legacyApiUrl,
       },
     });
     tables.devices.grantReadWriteData(devicesFn);
