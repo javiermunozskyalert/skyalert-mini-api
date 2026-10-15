@@ -24,6 +24,11 @@ interface ActivationItem {
   deviceIds_requested?: string[];
   deviceIds_sent?: string[];
   deviceIds_offline?: string[];
+  // Datos del evento sísmico (epicentro). Los escribe el productor de activaciones.
+  coordinates?: [number, number]; // [lon, lat]
+  location?: string;
+  magnitude?: number;
+  startedAt?: string; // ISO 8601
 }
 
 /**
@@ -97,6 +102,11 @@ export async function listHistoryEvents(
       command: ev.command ?? null,
       source: ev.source ?? null,
       latencyMs: ev.latency_ms ?? null,
+      // Datos del evento sísmico (epicentro).
+      coordinates: normalizeCoordinates(ev.coordinates),
+      location: ev.location ?? null,
+      magnitude: ev.magnitude ?? null,
+      startedAt: ev.startedAt ?? null,
       devices: tenantDevices.map((gpsDeviceId) => ({
         gpsDeviceId,
         registrationId: deviceMap.get(gpsDeviceId)?.registrationId ?? null,
@@ -116,6 +126,23 @@ export async function listHistoryEvents(
 interface TenantDevice {
   registrationId: string | null;
   name: string | null;
+}
+
+/**
+ * Normaliza coordinates a [lon, lat] solo si es una lista de exactamente 2
+ * números reales (no booleanos). Cualquier otra forma → null.
+ */
+function normalizeCoordinates(value: unknown): [number, number] | null {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return null;
+  }
+  const [lon, lat] = value;
+  const isRealNumber = (n: unknown): n is number =>
+    typeof n === 'number' && Number.isFinite(n);
+  if (!isRealNumber(lon) || !isRealNumber(lat)) {
+    return null;
+  }
+  return [lon, lat];
 }
 
 /** Devuelve un mapa gpsDeviceId -> { registrationId, name } de los devices activos del tenant. */
